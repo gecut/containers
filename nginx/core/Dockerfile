@@ -1,4 +1,4 @@
-FROM ghcr.io/gecut/nginx:3.5.0
+FROM ghcr.io/gecut/nginx:latest
 
 RUN apk add --no-cache curl
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --start-interval=1s --retries=3 CMD curl -fso /dev/null http://localhost/server-info || exit 1
