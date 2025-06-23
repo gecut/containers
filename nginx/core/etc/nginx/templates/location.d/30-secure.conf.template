@@ -1,0 +1,34 @@
+# Use if_not_owner to serve the content of symbolic links based on the last modified time of the original file.
+disable_symlinks $NGINX_DISABLE_SYMLINKS;
+
+location ~* (?:\.(?:bak|conf|dist|fla|in[ci]|log|psd|sh|sql|sw[op]|lock)|~)$ {
+  deny all;
+  access_log off; log_not_found off;
+}
+
+location ~* \.(pl|cgi|py|sh|lua)$ {
+  deny all;
+}
+
+location ~* (w00tw00t) {
+  deny all;
+}
+
+location ~* \.(engine|inc|info|install|make|module|profile|test|po|sh|.*sql|theme|tpl(\.php)?|xtmpl)$|^(\..*|Entries.*|Repository|Root|Tag|Template)$|\.php_ {
+  deny all;
+}
+
+location = /robots.txt {
+  access_log off; log_not_found off;
+  expires epoch;
+}
+
+location = /favicon.ico {
+  access_log off; log_not_found off;
+  expires epoch;
+}
+
+location ~ /\. {
+  deny all;
+  access_log off; log_not_found off;
+}

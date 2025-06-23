@@ -1,0 +1,36 @@
+gzip            $NGINX_GZIP;
+gzip_comp_level $NGINX_GZIP_COMP_LEVEL;
+gzip_vary       $NGINX_GZIP_VARY;
+gzip_min_length $NGINX_GZIP_MIN_LENGTH;
+gzip_disable    "MSIE [1-6].(?!.*SV1)";
+gzip_buffers    32 4k;
+gzip_proxied    any;
+gzip_types
+    application/ecmascript
+    application/javascript
+    application/json
+    application/postscript
+    application/font-woff
+    application/x-javascript
+    application/vnd.ms-fontobject
+    application/x-font-opentype
+    application/x-font-truetype
+    application/x-font-ttf
+    application/xml
+    image/gif
+    image/svg+xml
+    image/x-icon
+    text/x-component
+    text/x-js
+    text/css
+    text/csv
+    text/javascript
+    text/plain
+    text/xml
+    text/xsd
+    text/xsl
+    font/eot
+    font/opentype
+    font/otf
+    font/woff
+;
