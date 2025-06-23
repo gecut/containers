@@ -78,7 +78,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: registry.hamdocker.ir
-          username: ${{ secrets.HAMDOCKER_USERNAME }}
+          username: ${{env.USER}}
           password: ${{ secrets.HAMDOCKER_PASSWORD }}
 
       - name: 🏗 Extract metadata
@@ -89,7 +89,7 @@ jobs:
           github-token: ${{secrets.GITHUB_TOKEN}}
           images: |
             name=ghcr.io/${{env.USER}}/${{matrix.path}},enable=true
-            registry.hamdocker.ir/${{ secrets.HAMDOCKER_USERNAME }}/${{ github.event.repository.name }}
+            name=registry.hamdocker.ir/${{env.USER}}/${{matrix.path}},enable=true
           tags: |
             type=semver,enable=true,pattern={{major}}
             type=semver,enable=true,pattern={{major}}.{{minor}}
