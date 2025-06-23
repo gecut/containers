@@ -1,10 +1,10 @@
 #Examples
 #~*foo\.php?$  /app.php;
 #~*foo\.html?$ /app.php;
-#~\/blog\/* https://blog.alwatr.com;
-#~\/adobe-clickstream\/?$ $scheme://$host/product/alwatr-adobe-clickstream;
+#~\/blog\/* https://blog.gecut.com;
+#~\/adobe-clickstream\/?$ $scheme://$host/product/gecut-adobe-clickstream;
 #/marketplace/ $scheme://$host/products/;
 #~\/marketplace/product/amazon-redshift-self-serve\/?$ $scheme://$host/warehouse/amazon-redshift;
 #~\/marketplace/product/amazon-athena\/?$ $scheme://$host/warehouse/amazon-athena;
 #/marketplace/product/google-bigquery $scheme://$host/warehouse/google-bigquery;
-#~\/data-silos-data-canyons\/?$ https://blog.alwatr.com/beware-the-data-canyon-data-silos-big-brother-b005c187f35d;
+#~\/data-silos-data-canyons\/?$ https://blog.gecut.com/beware-the-data-canyon-data-silos-big-brother-b005c187f35d;

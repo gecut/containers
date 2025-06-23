@@ -16,7 +16,7 @@ on:
       - created
 
 env:
-  USER: alwatr
+  USER: gecut
 
 jobs:
   build:

@@ -1,4 +1,4 @@
-FROM ghcr.io/alwatr/nginx-core:3.5.0
+FROM ghcr.io/gecut/nginx-core:3.5.0
 
 # COPY etc/nginx/ /etc/nginx/
 # COPY default-data/ /default-data/
@@ -27,16 +27,16 @@ ENV NGINX_CLIENT_MAX_BODY_SIZE=1k \
 
 ARG BUILD_REV
 ARG BUILD_DATE
-LABEL org.opencontainers.image.title="alwatr/nginx-cdn" \
-      org.opencontainers.image.description="This is a high-performance version of NGINX, which has been enhanced by Alwatr for the purpose of serving static content efficiently." \
-      org.opencontainers.image.base.name="ghcr.io/alwatr/nginx-core:3.5.0" \
+LABEL org.opencontainers.image.title="gecut/nginx-cdn" \
+      org.opencontainers.image.description="This is a high-performance version of NGINX, which has been enhanced by Gecut Web for the purpose of serving static content efficiently." \
+      org.opencontainers.image.base.name="ghcr.io/gecut/nginx-core:3.5.0" \
       org.opencontainers.image.version="3.5.0" \
       org.opencontainers.image.ref.name="3.5.0-nginx1.27.4-alpine-slim" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.created=${BUILD_DATE} \
       org.opencontainers.image.revision=${BUILD_REV} \
-      org.opencontainers.image.vendor="Alwatr" \
-      org.opencontainers.image.source="https://github.com/Alwatr/nginx" \
-      org.opencontainers.image.url="https://github.com/Alwatr/nginx" \
-      org.opencontainers.image.documentation="https://github.com/Alwatr/nginx" \
-      org.opencontainers.image.authors="S. Ali Mihandoost <ali.mihandoost@gmail.com> (https://ali.mihandoost.com)"
+      org.opencontainers.image.vendor="Gecut Web" \
+      org.opencontainers.image.source="https://github.com/gecut/containers" \
+      org.opencontainers.image.url="https://github.com/gecut/containers" \
+      org.opencontainers.image.documentation="https://github.com/gecut/containers" \
+      org.opencontainers.image.authors="S. MohammadMahdi Zamanian <dev@mm25zamanian.ir> (https://mm25zamanian.ir)"

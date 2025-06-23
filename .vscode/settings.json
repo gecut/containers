@@ -11,7 +11,7 @@
   },
   "markdownlint.ignore": ["**/CHANGELOG.md"],
   "cSpell.language": "en,fa,fa-IR",
-  "cSpell.words": ["alwatr"],
+  "cSpell.words": ["gecut"],
   "git.autoStash": true,
   "githubPullRequests.ignoredPullRequestBranches": ["main", "next"]
 }
