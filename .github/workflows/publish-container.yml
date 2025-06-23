@@ -7,7 +7,7 @@ on:
 
   push:
     branches:
-      - next
+      - main
 
   pull_request:
 
