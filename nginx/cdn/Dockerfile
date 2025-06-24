@@ -1,4 +1,4 @@
-FROM ghcr.io/gecut/nginx-core:latest
+FROM ghcr.io/gecut/nginx/core:latest
 
 # COPY etc/nginx/ /etc/nginx/
 # COPY default-data/ /default-data/
