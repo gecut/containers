@@ -2,29 +2,38 @@
 
 name: Build & Publish Containers
 
+# Defines the events that trigger this workflow.
 on:
+  # Allows manual execution from the GitHub UI.
   workflow_dispatch:
 
+  # Triggers on pushes to the main branch.
   push:
     branches:
       - main
 
+  # Triggers on pull requests targeting the main branch.
   pull_request:
 
+  # Triggers when a new release is created.
   release:
     types:
       - created
 
+# Environment variables available to all jobs in the workflow.
 env:
-  USER: gecut
+  # Using github.repository_owner makes the workflow reusable and not hardcoded.
+  REGISTRY_USER: ${{ github.repository_owner }}
 
 jobs:
-  build:
-    name: Build & Publish Containers
+  build-and-publish:
+    name: Build & Publish Matrix
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: true
+      # Ensures that if one matrix job fails, others will continue to run.
+      # This is useful for seeing all potential failures at once.
+      fail-fast: false
       max-parallel: 1
       matrix:
         include:
@@ -32,95 +41,122 @@ jobs:
           - path: nginx/core
           - path: nginx/cdn
 
+    # Defines permissions required by the jobs.
+    # Following the principle of least privilege.
     permissions:
       contents: read
       packages: write
+      # Required for signing images with Sigstore/Cosign.
       id-token: write
 
     steps:
-      - name: ⤵️ Checkout repository
-        uses: actions/checkout@v4.2.2
+      # Step 1: Checkout the repository code.
+      - name: ⤵️ Checkout Repository
+        uses: actions/checkout@v4
 
-      - name: ❔ Check Container files changed
-        id: file_change
-        if: ${{ github.event_name != 'release' && github.event_name != 'workflow_dispatch' }}
-        uses: dorny/paths-filter@v3.0.2
+      # Step 2: Check for file changes only for push and pull_request events.
+      # For other events like release or workflow_dispatch, we assume a build is always needed.
+      - name: ❔ Check for Relevant File Changes
+        id: changes
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
         with:
           filters: |
             container_folder:
-              ./${{ matrix.path }}/**
+              - ./${{ matrix.path }}/**
 
-      - name: 🏗 Install cosign
-        if: ${{ github.event_name != 'pull_request' && steps.file_change.outputs.container_folder != 'false' }}
-        uses: sigstore/cosign-installer@v3.8.1
+      # Step 3: Decide if the build should run based on the trigger type or file changes.
+      # This centralizes the logic for better readability and maintenance.
+      - name: ⚙️ Determine if Build is Required
+        id: build_decision
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "release" || "${{ steps.changes.outputs.container_folder }}" == "true" ]]; then
+            echo "should_build=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_build=false" >> $GITHUB_OUTPUT
+          fi
+        
+      # The following steps will only run if the 'build_decision' step sets 'should_build' to true.
+      
+      # Step 4: Set up QEMU for multi-platform build support (good practice).
+      - name: 🏗 Setup QEMU
+        if: steps.build_decision.outputs.should_build == 'true'
+        uses: docker/setup-qemu-action@v3
 
+      # Step 5: Set up Docker Buildx, the builder engine.
       - name: 🏗 Setup Docker Buildx
-        if: ${{ steps.file_change.outputs.container_folder != 'false' }}
-        uses: docker/setup-buildx-action@v3.9.0
+        if: steps.build_decision.outputs.should_build == 'true'
+        uses: docker/setup-buildx-action@v3
 
+      # Step 6: Configure and restore cache for Docker layers to speed up builds.
       - name: 🏗 Cache Docker Layers
-        if: ${{ steps.file_change.outputs.container_folder != 'false' }}
-        uses: actions/cache@v4.2.1
+        if: steps.build_decision.outputs.should_build == 'true'
+        uses: actions/cache@v4
         with:
           path: /tmp/.buildx-cache
-          key: container/${{ matrix.path }}
+          key: buildx-${{ runner.os }}-${{ matrix.path }}-${{ github.sha }}
+          restore-keys: |
+            buildx-${{ runner.os }}-${{ matrix.path }}-
 
-      - name: 🏗 Log into ghcr.io registry
-        if: ${{ github.event_name != 'pull_request' && steps.file_change.outputs.container_folder != 'false' }}
-        uses: docker/login-action@v3.3.0
+      # Step 7: Log into GitHub Container Registry (ghcr.io).
+      # This step only runs on events that are not pull requests.
+      - name: 🔐 Log into ghcr.io Registry
+        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{env.USER}}
-          password: ${{secrets.GITHUB_TOKEN}}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Login to Hamdocker.ir
-        if: github.event_name != 'pull_request'
+      # Step 8: Log into the custom Hamdocker.ir registry.
+      - name: 🔐 Log into Hamdocker.ir Registry
+        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: registry.hamdocker.ir
-          username: ${{env.USER}}
+          username: ${{ env.REGISTRY_USER }}
           password: ${{ secrets.HAMDOCKER_PASSWORD }}
 
-      - name: 🏗 Extract metadata
-        if: ${{ steps.file_change.outputs.container_folder != 'false' }}
+      # Step 9: Generate metadata for the container images, including names and tags.
+      - name: Extract Container Metadata
         id: meta
-        uses: docker/metadata-action@v5.6.1
+        if: steps.build_decision.outputs.should_build == 'true'
+        uses: docker/metadata-action@v5
         with:
-          github-token: ${{secrets.GITHUB_TOKEN}}
           images: |
-            name=ghcr.io/${{env.USER}}/${{matrix.path}},enable=true
-            name=registry.hamdocker.ir/${{env.USER}}/${{matrix.path}},enable=true
+            ghcr.io/${{ env.REGISTRY_USER }}/${{ matrix.path }}
+            registry.hamdocker.ir/${{ env.REGISTRY_USER }}/${{ matrix.path }}
           tags: |
-            type=semver,enable=true,pattern={{major}}
-            type=semver,enable=true,pattern={{major}}.{{minor}}
-            type=semver,enable=true,pattern={{version}}
-            type=ref,enable=true,event=branch
-            type=sha,enable=true,priority=100,prefix=sha-,suffix=,format=short
-            type=raw,enable={{is_default_branch}},value=latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=ref,event=branch
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=,suffix=,format=short
 
-      - name: 🚀 Build and export to docker
-        if: ${{ steps.file_change.outputs.container_folder != 'false' }}
-        uses: docker/build-push-action@v6.14.0
+      # Step 10: Build and Push the container image.
+      # The 'push' parameter is conditional: it pushes only if the event is not a pull request.
+      - name: 🚀 Build and Push Container Image
+        id: build-and-push
+        if: steps.build_decision.outputs.should_build == 'true'
+        uses: docker/build-push-action@v6
         with:
-          context: ./${{matrix.path}}
-          push: false
-          load: true
-          tags: ${{env.USER}}/${{matrix.path}}:test
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-          build-args: |
-            BUILD_DATE=${{github.event.repository.updated_at}}
-            BUILD_REV=${{github.sha}}
-
-      - name: 🚀 Build and publish container image
-        if: ${{ steps.file_change.outputs.container_folder != 'false' }}
-        uses: docker/build-push-action@v6.14.0
-        with:
-          context: ./${{matrix.path}}
+          context: ./${{ matrix.path }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{steps.meta.outputs.tags}}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
-            BUILD_DATE=${{github.event.repository.updated_at}}
-            BUILD_REV=${{github.sha}}
+            BUILD_DATE=${{ github.event.repository.updated_at }}
+            BUILD_REV=${{ github.sha }}
+
+      # Step 11: Install Cosign for signing the images.
+      - name: 🖋 Install Cosign
+        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3
+
+      # Step 12: Sign the pushed container images using Cosign's keyless signing.
+      - name: 🖋 Sign Container Image
+        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
+        run: cosign sign --yes "${{ steps.meta.outputs.tags }}"
