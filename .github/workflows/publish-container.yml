@@ -157,6 +157,12 @@ jobs:
         uses: sigstore/cosign-installer@v3
 
       # Step 12: Sign the pushed container images using Cosign's keyless signing.
-      - name: 🖋 Sign Container Image
+      # We loop through each base image name from the metadata step and sign the immutable digest
+      # produced by the build-and-push step. This is more secure than signing mutable tags.
+      - name: 🖋 Sign Container Images
         if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
-        run: cosign sign --yes "${{ steps.meta.outputs.tags }}"
+        run: |
+          for image in ${{ steps.meta.outputs.images }}; do
+            echo "Signing ${image}@${{ steps.build-and-push.outputs.digest }}"
+            cosign sign --yes "${image}@${{ steps.build-and-push.outputs.digest }}"
+          done
