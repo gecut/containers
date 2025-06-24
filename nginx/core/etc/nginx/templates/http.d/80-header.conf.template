@@ -1,4 +1,4 @@
-add_header  Server Gecut WebWebServer always;
+add_header  Server "Gecut Web Server" always;
 add_header  X-Frame-Options SAMEORIGIN;
 add_header  X-Content-Type-Options nosniff;
 add_header  X-XSS-Protection "1; mode=block";
