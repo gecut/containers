@@ -40,6 +40,7 @@ jobs:
           - path: nginx/base
           - path: nginx/core
           - path: nginx/cdn
+          - path: nextjs/with-prisma
 
     # Defines permissions required by the jobs.
     # Following the principle of least privilege.
@@ -111,6 +112,7 @@ jobs:
       # Step 8: Log into the custom Hamdocker.ir registry.
       - name: 🔐 Log into Hamdocker.ir Registry
         if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
+        # if: false
         uses: docker/login-action@v3
         with:
           registry: registry.hamdocker.ir
