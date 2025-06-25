@@ -18,7 +18,21 @@ ENV NEXT_TELEMETRY_DISABLED=1
 # ... (No changes here)
 # ==============================================================================
 FROM base AS dependencies
-COPY package.json .npmrc .yarnrc.yml pnpm-lock.yaml yarn.lock package-lock.json* ./
+
+# Use a RUN --mount command to selectively copy only the files that exist,
+# preventing build failures if optional files like .npmrc are missing.
+# This requires the BuildKit engine (default in modern Docker).
+RUN --mount=type=bind,source=.,target=/src \
+    sh -c " \
+      echo 'Copying configuration files...'; \
+      cp /src/package.json . ; \
+      cp /src/.npmrc . 2>/dev/null || true; \
+      cp /src/.yarnrc.yml . 2>/dev/null || true; \
+      cp /src/pnpm-lock.yaml . 2>/dev/null || true; \
+      cp /src/yarn.lock . 2>/dev/null || true; \
+      cp /src/package-lock.json* . 2>/dev/null || true; \
+    "
+
 RUN \
   if [ "$PACKAGE_MANAGER" = "npm" ]; then echo "Installing with npm..." && npm ci; \
   elif [ "$PACKAGE_MANAGER" = "yarn" ]; then echo "Installing with yarn..." && yarn install --frozen-lockfile; \
