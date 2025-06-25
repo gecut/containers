@@ -111,8 +111,8 @@ jobs:
 
       # Step 8: Log into the custom Hamdocker.ir registry.
       - name: 🔐 Log into Hamdocker.ir Registry
-        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
-        # if: false
+        # if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
+        if: false
         uses: docker/login-action@v3
         with:
           registry: registry.hamdocker.ir
@@ -127,7 +127,7 @@ jobs:
         with:
           images: |
             ghcr.io/${{ env.REGISTRY_USER }}/${{ matrix.path }}
-            registry.hamdocker.ir/${{ env.REGISTRY_USER }}/${{ matrix.path }}
+            # registry.hamdocker.ir/${{ env.REGISTRY_USER }}/${{ matrix.path }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
