@@ -1,12 +1,13 @@
 #!/bin/sh
 # Script 30: Trigger Next.js revalidation.
-# This script runs as ROOT but launches the task in the background as the 'nextjs' user.
 
 set -e
 
-# This function contains the actual revalidation logic.
-# It will be executed by a sub-shell as the 'nextjs' user.
-run_revalidation_task() {
+echo "[script-30] Launching revalidation task in the background..."
+
+# The logic is now placed directly inside the 'sh -c' command.
+# The single quotes '...' ensure the entire block is treated as one command string.
+su-exec nextjs sh -c '
   # Check if the REVALIDATE_SECRET environment variable is set.
   if [ -z "$REVALIDATE_SECRET" ]; then
     echo "[revalidate] REVALIDATE_SECRET not set. Skipping."
@@ -29,14 +30,4 @@ run_revalidation_task() {
   else
     echo "[revalidate] WARNING: Request failed. The server might not be ready or the endpoint is incorrect."
   fi
-}
-
-# Export the function so the sub-shell (sh -c) can see it.
-export -f run_revalidation_task
-
-echo "[script-30] Launching revalidation task in the background..."
-
-# Use su-exec to run a new shell as 'nextjs'.
-# The 'sh -c "run_revalidation_task"' executes our function.
-# The '&' at the end sends the entire command to the background.
-su-exec nextjs sh -c "run_revalidation_task" &
+' &
