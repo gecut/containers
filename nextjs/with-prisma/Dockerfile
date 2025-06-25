@@ -23,5 +23,3 @@ RUN chmod +x /setup.sh /scripts/*.sh
 EXPOSE ${PORT}
 ENTRYPOINT ["/setup.sh"]
 
-# The default command to run the application
-CMD ["node", "server.js"]
