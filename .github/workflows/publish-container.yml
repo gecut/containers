@@ -41,6 +41,7 @@ jobs:
           - path: nginx/core
           - path: nginx/cdn
           - path: nextjs/with-prisma
+          - path: nextjs/with-payload
 
     # Defines permissions required by the jobs.
     # Following the principle of least privilege.
