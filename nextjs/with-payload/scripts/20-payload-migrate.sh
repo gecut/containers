@@ -19,7 +19,7 @@ if [ ! -d "/app/node_modules" ]; then
     exit 1
 fi
 
-if [ ! -f "/app/payload.config.ts" ] && [ ! -f "/app/payload.config.js" ]; then
+if [ ! -f "/app/src/payload.config.ts" ] && [ ! -f "/app/src/payload.config.js" ]; then
     echo "[script-20] Error: Payload config file not found"
     exit 1
 fi
