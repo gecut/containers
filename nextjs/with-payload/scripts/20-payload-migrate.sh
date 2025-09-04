@@ -33,6 +33,11 @@ echo "[script-20] Running Payload migrations..."
 if su-exec nextjs ./node_modules/.bin/payload migrate; then
     echo "[script-20] Payload migrations completed successfully"
 else
-    echo "[script-20] Error: Payload migration failed"
-    exit 1
+    echo "[script-20] First migration command failed, trying alternative method..."
+    if su-exec nextjs node ./node_modules/payload/dist/bin/migrate.js; then
+        echo "[script-20] Payload migrations completed successfully with alternative method"
+    else
+        echo "[script-20] Error: Both migration methods failed"
+        exit 1
+    fi
 fi
