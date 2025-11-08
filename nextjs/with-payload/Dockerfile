@@ -1,11 +1,5 @@
-####################
-# Build arguments
-####################
-ARG NODE_VERSION=22.12.0
-ARG APP_DIR=/app
-
 # This is the one and only stage for the base image
-FROM node:${NODE_VERSION}-alpine
+FROM ghcr.io/gecut/nextjs/base:latest
 
 WORKDIR /app
 
