@@ -6,7 +6,7 @@ set -e
 
 if [ -f "/app/prisma/schema.prisma" ]; then
     echo "[script-20] Prisma schema found. Running migrations as 'nextjs' user..."
-    su-exec nextjs npx prisma db push --skip-generate
+    su-exec nextjs npx prisma@6.16 db push --skip-generate
 else
     echo "[script-20] No Prisma schema found. Skipping db pushing."
 fi
