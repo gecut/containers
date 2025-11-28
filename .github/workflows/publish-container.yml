@@ -55,7 +55,7 @@ jobs:
     steps:
       # Step 1: Checkout the repository code.
       - name: ⤵️ Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       # Step 2: Check for file changes only for push and pull_request events.
       # For other events like release or workflow_dispatch, we assume a build is always needed.
