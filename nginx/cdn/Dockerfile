@@ -1,4 +1,4 @@
-FROM ghcr.io/gecut/nginx/core:${BUILD_VERSION}
+FROM ghcr.io/gecut/nginx/core:latest
 
 # COPY etc/nginx/ /etc/nginx/
 # COPY default-data/ /default-data/
@@ -30,7 +30,6 @@ ARG BUILD_REV
 ARG BUILD_DATE
 LABEL org.opencontainers.image.title="gecut/nginx/cdn" \
       org.opencontainers.image.description="A CDN-optimized NGINX image for efficient static content delivery, packaged by Gecut." \
-      org.opencontainers.image.base.name="ghcr.io/gecut/nginx/core:${BUILD_VERSION}" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.created=${BUILD_DATE} \

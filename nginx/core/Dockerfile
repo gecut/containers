@@ -1,4 +1,4 @@
-FROM ghcr.io/gecut/nginx/base:${BUILD_VERSION}
+FROM ghcr.io/gecut/nginx/base:latest
 
 RUN apk add --no-cache curl
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --start-interval=1s --retries=3 CMD curl -fso /dev/null http://localhost/server-info || exit 1
@@ -56,7 +56,6 @@ ARG BUILD_REV
 ARG BUILD_DATE
 LABEL org.opencontainers.image.title="gecut/nginx/core" \
       org.opencontainers.image.description="A high-performance NGINX image for serving static content, packaged by Gecut." \
-      org.opencontainers.image.base.name="ghcr.io/gecut/nginx/base:${BUILD_VERSION}" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.created=${BUILD_DATE} \
