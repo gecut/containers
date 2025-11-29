@@ -25,7 +25,7 @@ ENV NGINX_CLIENT_MAX_BODY_SIZE=1k \
     NGINX_GZIP_MIN_LENGTH=256 \
     NGINX_DISABLE_SYMLINKS=if_not_owner
 
-ARG BUILD_VERSION=0.0.0-dev
+ARG BUILD_VERSION=0.0.0-cdn
 ARG BUILD_REV
 ARG BUILD_DATE
 LABEL org.opencontainers.image.title="gecut/nginx/cdn" \

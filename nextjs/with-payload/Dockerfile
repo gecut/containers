@@ -1,15 +1,14 @@
-ARG BUILD_VERSION=0.0.0-dev
-FROM ghcr.io/gecut/nextjs/base:${BUILD_VERSION}
+FROM ghcr.io/gecut/nextjs/base:latest
 
 # Copy only the scripts specific to this variant
 COPY scripts/ /scripts/
 RUN chmod +x /scripts/*.sh
 
+ARG BUILD_VERSION=0.0.0
 ARG BUILD_REV
 ARG BUILD_DATE
-LABEL org.opencontainers.image.title="gecut/nextjs/with-payload" \
+LABEL org.opencontainers.image.title="gecut/nextjs/nexload" \
       org.opencontainers.image.description="A Next.js image with PayloadCMS support, packaged by Gecut." \
-      org.opencontainers.image.base.name="ghcr.io/gecut/nextjs/base:${BUILD_VERSION}" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.created=${BUILD_DATE} \

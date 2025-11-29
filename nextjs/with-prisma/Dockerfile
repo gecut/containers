@@ -23,7 +23,7 @@ RUN chmod +x /setup.sh /scripts/*.sh
 EXPOSE ${PORT}
 ENTRYPOINT ["/setup.sh"]
 
-ARG BUILD_VERSION=0.0.0-dev
+ARG BUILD_VERSION=0.0.0-prisma
 ARG BUILD_REV
 ARG BUILD_DATE
 LABEL org.opencontainers.image.title="gecut/nextjs/with-prisma" \
