@@ -37,28 +37,28 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - path: nginx/base
-          - path: nginx/core
-          - path: nginx/cdn
-          - path: nextjs/base
-          - path: nextjs/with-prisma
-          - path: nextjs/with-payload
+          - name: nginx
+            path: nginx/base
+          - name: nginx
+            path: nginx/core
+          - name: nginx
+            path: nginx/cdn
+          - name: nextjs
+            path: nextjs/base
+          - name: nextjs
+            path: nextjs/with-prisma
+          - name: nexload
+            path: nextjs/with-payload
 
-    # Defines permissions required by the jobs.
-    # Following the principle of least privilege.
     permissions:
       contents: read
       packages: write
-      # Required for signing images with Sigstore/Cosign.
       id-token: write
 
     steps:
-      # Step 1: Checkout the repository code.
       - name: ⤵️ Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4.2.2
 
-      # Step 2: Check for file changes only for push and pull_request events.
-      # For other events like release or workflow_dispatch, we assume a build is always needed.
       - name: ❔ Check for Relevant File Changes
         id: changes
         if: github.event_name == 'push' || github.event_name == 'pull_request'
@@ -68,8 +68,6 @@ jobs:
             container_folder:
               - ./${{ matrix.path }}/**
 
-      # Step 3: Decide if the build should run based on the trigger type or file changes.
-      # This centralizes the logic for better readability and maintenance.
       - name: ⚙️ Determine if Build is Required
         id: build_decision
         run: |
@@ -79,19 +77,22 @@ jobs:
             echo "should_build=false" >> $GITHUB_OUTPUT
           fi
 
-      # The following steps will only run if the 'build_decision' step sets 'should_build' to true.
+      - name: 🏗 Extract version from dockerfile
+        if: ${{ steps.build_decision.outputs.should_build == 'true' }}
+        id: version
+        run: |
+          version=$(grep 'org.opencontainers.image.version' ./${{ matrix.path }}/Dockerfile | cut -d'"' -f2)
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "version: $version"
 
-      # Step 4: Set up QEMU for multi-platform build support (good practice).
-      - name: 🏗 Setup QEMU
-        if: steps.build_decision.outputs.should_build == 'true'
-        uses: docker/setup-qemu-action@v3
+      - name: 🏗 Install cosign
+        if: ${{ github.event_name != 'pull_request' && steps.build_decision.outputs.should_build == 'true' }}
+        uses: sigstore/cosign-installer@v3.8.1
 
-      # Step 5: Set up Docker Buildx, the builder engine.
       - name: 🏗 Setup Docker Buildx
         if: steps.build_decision.outputs.should_build == 'true'
         uses: docker/setup-buildx-action@v3
 
-      # Step 6: Configure and restore cache for Docker layers to speed up builds.
       - name: 🏗 Cache Docker Layers
         if: steps.build_decision.outputs.should_build == 'true'
         uses: actions/cache@v4
@@ -101,8 +102,6 @@ jobs:
           restore-keys: |
             buildx-${{ runner.os }}-${{ matrix.path }}-
 
-      # Step 7: Log into GitHub Container Registry (ghcr.io).
-      # This step only runs on events that are not pull requests.
       - name: 🔐 Log into ghcr.io Registry
         if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
         uses: docker/login-action@v3
@@ -111,35 +110,18 @@ jobs:
           username: ${{ env.REGISTRY_USER }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Step 8: Log into the custom Hamdocker.ir registry.
-      - name: 🔐 Log into Hamdocker.ir Registry
-        # if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
-        if: false
-        uses: docker/login-action@v3
-        with:
-          registry: registry.hamdocker.ir
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ secrets.HAMDOCKER_PASSWORD }}
-
-      # Step 9: Generate metadata for the container images, including names and tags.
       - name: Extract Container Metadata
         id: meta
         if: steps.build_decision.outputs.should_build == 'true'
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6.15.0
         with:
-          images: |
-            ghcr.io/${{ env.REGISTRY_USER }}/${{ matrix.path }}
-            # registry.hamdocker.ir/${{ env.REGISTRY_USER }}/${{ matrix.path }}
+          images: ghcr.io/${{env.USER}}/${{matrix.name}}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
             type=ref,event=branch
+            type=raw,value=${{steps.version.outputs.version}}
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=,suffix=,format=short
 
-      # Step 10: Build and Push the container image.
-      # The 'push' parameter is conditional: it pushes only if the event is not a pull request.
       - name: 🚀 Build and Push Container Image
         id: build-and-push
         if: steps.build_decision.outputs.should_build == 'true'

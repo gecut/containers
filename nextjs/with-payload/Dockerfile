@@ -1,25 +1,23 @@
-# This is the one and only stage for the base image
-FROM ghcr.io/gecut/nextjs/base:latest
+ARG BUILD_VERSION=0.0.0-dev
+FROM ghcr.io/gecut/nextjs/base:${BUILD_VERSION}
 
-WORKDIR /app
-
-# Install runtime dependencies needed for the scripts
-RUN apk add --no-cache libc6-compat vips curl su-exec tini
-RUN rm -rf /var/cache/apk/*
-
-# Create a non-root user and set up the environment
-ENV NODE_ENV=production
-ENV PORT=3000
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy the startup scripts that define the platform's behavior
-COPY setup.sh /setup.sh
+# Copy only the scripts specific to this variant
 COPY scripts/ /scripts/
-RUN chmod +x /setup.sh /scripts/*.sh
+RUN chmod +x /scripts/*.sh
 
-# Expose the port and define the entrypoint
-EXPOSE ${PORT}
-STOPSIGNAL SIGTERM
-ENTRYPOINT ["/sbin/tini","-g","--","/setup.sh"]
+ARG BUILD_REV
+ARG BUILD_DATE
+LABEL org.opencontainers.image.title="gecut/nextjs/with-payload" \
+      org.opencontainers.image.description="A Next.js image with PayloadCMS support, packaged by Gecut." \
+      org.opencontainers.image.base.name="ghcr.io/gecut/nextjs/base:${BUILD_VERSION}" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.licenses="AGPL-3.0-only" \
+      org.opencontainers.image.created=${BUILD_DATE} \
+      org.opencontainers.image.revision=${BUILD_REV} \
+      org.opencontainers.image.vendor="Gecut" \
+      org.opencontainers.image.source="https://github.com/gecut/containers/tree/main/nextjs/with-payload" \
+      org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nextjs/with-payload" \
+      org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nextjs/with-payload" \
+      org.opencontainers.image.authors="S. MohammadMahdi Zamanian <dev@mm25zamanian.ir> (https://mm25zamanian.ir)"
+
 

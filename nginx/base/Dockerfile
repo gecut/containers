@@ -18,16 +18,15 @@ ENV NGINX_WORKER_CONNECTIONS=2048 \
 
 ARG BUILD_REV
 ARG BUILD_DATE
-LABEL org.opencontainers.image.title="gecut/nginx" \
-      org.opencontainers.image.description="The slim (lightweight) version of the NGINX web server, packaged by Gecut Web." \
+LABEL org.opencontainers.image.title="gecut/nginx/base" \
+      org.opencontainers.image.description="Base NGINX image with a modular entrypoint system, packaged by Gecut." \
       org.opencontainers.image.base.name="docker.io/library/nginx:1.27.4-alpine-slim" \
-      org.opencontainers.image.version="1.27.4" \
-      org.opencontainers.image.ref.name="1.27.4-alpine-slim" \
-      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.created=${BUILD_DATE} \
       org.opencontainers.image.revision=${BUILD_REV} \
       org.opencontainers.image.vendor="Gecut" \
-      org.opencontainers.image.source="https://github.com/gecut/containers" \
-      org.opencontainers.image.url="https://github.com/gecut/containers" \
-      org.opencontainers.image.documentation="https://github.com/gecut/containers" \
+      org.opencontainers.image.source="https://github.com/gecut/containers/tree/main/nginx/base" \
+      org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nginx/base" \
+      org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nginx/base" \
       org.opencontainers.image.authors="S. MohammadMahdi Zamanian <dev@mm25zamanian.ir> (https://mm25zamanian.ir)"

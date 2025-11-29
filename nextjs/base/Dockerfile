@@ -29,3 +29,20 @@ EXPOSE ${PORT}
 STOPSIGNAL SIGTERM
 ENTRYPOINT ["/sbin/tini","-g","--","/setup.sh"]
 
+ARG BUILD_VERSION=0.0.0-dev
+ARG BUILD_REV
+ARG BUILD_DATE
+LABEL org.opencontainers.image.title="gecut/nextjs/base" \
+      org.opencontainers.image.description="Base image for running Next.js applications, packaged by Gecut." \
+      org.opencontainers.image.base.name="docker.io/library/node:22.12.0-alpine" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.licenses="AGPL-3.0-only" \
+      org.opencontainers.image.created=${BUILD_DATE} \
+      org.opencontainers.image.revision=${BUILD_REV} \
+      org.opencontainers.image.vendor="Gecut" \
+      org.opencontainers.image.source="https://github.com/gecut/containers/tree/main/nextjs/base" \
+      org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nextjs/base" \
+      org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nextjs/base" \
+      org.opencontainers.image.authors="S. MohammadMahdi Zamanian <dev@mm25zamanian.ir> (https://mm25zamanian.ir)"
+
+

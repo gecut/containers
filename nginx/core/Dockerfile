@@ -1,4 +1,4 @@
-FROM ghcr.io/gecut/nginx/base:latest
+FROM ghcr.io/gecut/nginx/base:${BUILD_VERSION}
 
 RUN apk add --no-cache curl
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --start-interval=1s --retries=3 CMD curl -fso /dev/null http://localhost/server-info || exit 1
@@ -51,18 +51,19 @@ ENV NGINX_CLIENT_MAX_BODY_SIZE=10m \
     NGINX_GZIP_MIN_LENGTH=256 \
     NGINX_DISABLE_SYMLINKS=if_not_owner
 
+ARG BUILD_VERSION=0.0.0-dev
 ARG BUILD_REV
 ARG BUILD_DATE
-LABEL org.opencontainers.image.title="gecut/nginx-core" \
-      org.opencontainers.image.description="This is a high-performance version of NGINX, which has been enhanced by Gecut Web for the purpose of serving static content efficiently." \
-      org.opencontainers.image.base.name="ghcr.io/gecut/nginx:3.5.0" \
-      org.opencontainers.image.version="3.5.0-nginx1.27.4" \
-      org.opencontainers.image.ref.name="3.5.0-nginx1.27.4-alpine-slim" \
-      org.opencontainers.image.licenses="MIT" \
+LABEL org.opencontainers.image.title="gecut/nginx/core" \
+      org.opencontainers.image.description="A high-performance NGINX image for serving static content, packaged by Gecut." \
+      org.opencontainers.image.base.name="ghcr.io/gecut/nginx/base:${BUILD_VERSION}" \
+      org.opencontainers.image.version="${BUILD_VERSION}" \
+      org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.created=${BUILD_DATE} \
       org.opencontainers.image.revision=${BUILD_REV} \
-      org.opencontainers.image.vendor="Gecut Web" \
-      org.opencontainers.image.source="https://github.com/gecut/containers" \
-      org.opencontainers.image.url="https://github.com/gecut/containers" \
-      org.opencontainers.image.documentation="https://github.com/gecut/containers" \
+      org.opencontainers.image.vendor="Gecut" \
+      org.opencontainers.image.source="https://github.com/gecut/containers/tree/main/nginx/core" \
+      org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nginx/core" \
+      org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nginx/core" \
       org.opencontainers.image.authors="S. MohammadMahdi Zamanian <dev@mm25zamanian.ir> (https://mm25zamanian.ir)"
+
