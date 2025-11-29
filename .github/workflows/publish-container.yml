@@ -81,7 +81,7 @@ jobs:
         if: ${{ steps.build_decision.outputs.should_build == 'true' }}
         id: version
         run: |
-          version=$(grep 'org.opencontainers.image.version' ./${{ matrix.path }}/Dockerfile | cut -d'"' -f2)
+          version=$(grep 'ARG BUILD_VERSION' ./${{ matrix.path }}/Dockerfile | cut -d'=' -f2)
           echo "version=$version" >> $GITHUB_OUTPUT
           echo "version: $version"
 
@@ -115,7 +115,7 @@ jobs:
         if: steps.build_decision.outputs.should_build == 'true'
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{env.USER}}/${{matrix.name}}
+          images: ghcr.io/${{env.REGISTRY_USER}}/${{matrix.name}}
           tags: |
             type=ref,event=branch
             type=raw,value=${{steps.version.outputs.version}}
