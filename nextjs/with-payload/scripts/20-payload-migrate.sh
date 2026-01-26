@@ -5,7 +5,7 @@ set -e
 
 # Check if migration should be skipped
 if [ "$SKIPING_MIGRATE" = "true" ] || [ "$SKIPING_MIGRATE" = "1" ]; then
-    echo "[script-20] NO_MIGRATE is set, skipping migration."
+    echo "[script-20] 'SKIPING_MIGRATE' is set, skipping migration."
     exit 0
 fi
 
