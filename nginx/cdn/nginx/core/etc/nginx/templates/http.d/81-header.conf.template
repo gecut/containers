@@ -1,0 +1,2 @@
+add_header Cache-Control "public, max-age=31536000, immutable";
+add_header Expires "$http_date";

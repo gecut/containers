@@ -1,6 +1,6 @@
 FROM ghcr.io/gecut/nginx/core:latest
 
-# COPY etc/nginx/ /etc/nginx/
+COPY etc/nginx/ /etc/nginx/
 # COPY default-data/ /default-data/
 # RUN ls -RlahF /etc/nginx /default-data /data
 
