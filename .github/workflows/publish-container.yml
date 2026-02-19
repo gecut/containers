@@ -124,7 +124,7 @@ jobs:
         with:
           images: |
             ghcr.io/${{env.REGISTRY_USER}}/${{matrix.name}},enable=true
-            docker.io/mm25zamanian/${{matrix.name}},enable=true
+            docker.io/mm25zamanian/${{matrix.name}},enable=false
           tags: |
             type=ref,event=branch
             type=raw,value=${{steps.version.outputs.version}}
