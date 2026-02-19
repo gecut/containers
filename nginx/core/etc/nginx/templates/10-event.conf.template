@@ -7,6 +7,6 @@ events {
   # Should be < worker_rlimit_nofile.
   worker_connections $NGINX_WORKER_CONNECTIONS;
 
-  # accept as many connections as possible, may flood worker connections if set too low -- for testing environment
-  # multi_accept on;
+  # accept as many connections as possible, may flood worker connections if set too low
+  multi_accept $NGINX_MULTI_ACCEPT;
 }

@@ -4,4 +4,5 @@ location = /_error.html {
   ssi on;
   internal;
   auth_basic off;
+  add_header Cache-Control "no-store" always;
 }

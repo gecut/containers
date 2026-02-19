@@ -1,4 +1,4 @@
-FROM docker.io/library/nginx:1.27.4-alpine-slim
+FROM docker.io/library/nginx:1.28.2-alpine-slim
 
 RUN rm -rfv /docker-entrypoint* /etc/nginx/conf.d/* /etc/nginx/nginx.conf /var/www/html /usr/share/nginx/html /data
 COPY etc/nginx/ /etc/nginx/
@@ -13,15 +13,17 @@ CMD ["nginx", "-g", "daemon off;"]
 
 # Default environment for nginx template
 ENV NGINX_WORKER_CONNECTIONS=2048 \
+    NGINX_WORKER_RLIMIT_NOFILE=262144 \
+    NGINX_MULTI_ACCEPT=off \
     NGINX_ENTRYPOINT_WORKER_PROCESSES_AUTOTUNE=1 \
     NGINX_ENTRYPOINT_QUIET_LOGS=""
 
-ARG BUILD_VERSION=0.0.0-base
+ARG BUILD_VERSION=0.0.0
 ARG BUILD_REV
 ARG BUILD_DATE
 LABEL org.opencontainers.image.title="gecut/nginx/base" \
       org.opencontainers.image.description="Base NGINX image with a modular entrypoint system, packaged by Gecut." \
-      org.opencontainers.image.base.name="docker.io/library/nginx:1.27.4-alpine-slim" \
+      org.opencontainers.image.base.name="docker.io/library/nginx:1.28.2-alpine-slim" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.created=${BUILD_DATE} \

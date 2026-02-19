@@ -13,8 +13,11 @@ COPY default-data/ /default-data/
 ENV NGINX_ACCESS_LOG="/var/log/nginx/access.log json" \
     NGINX_ERROR_LOG_LEVEL=notice \
     NGINX_WORKER_CONNECTIONS=2048 \
+    NGINX_WORKER_RLIMIT_NOFILE=262144 \
+    NGINX_MULTI_ACCEPT=off \
     NGINX_LIMIT_REQ_ERROR=503 \
     NGINX_LIMIT_REQ_LOG=notice \
+    NGINX_ENABLE_GLOBAL_LIMIT_REQ=off \
     NGINX_AUTOINDEX=off \
     NGINX_DOCUMENT_ROOT=/data \
     NGINX_FORCE_DOMAIN="" \
@@ -28,6 +31,8 @@ ENV NGINX_ACCESS_LOG="/var/log/nginx/access.log json" \
     NGINX_CORS_METHODS="GET, OPTIONS" \
     NGINX_CORS_HEADERS="*" \
     NGINX_CORS_MAXAGE=86400 \
+    NGINX_REAL_IP_HEADER="X-Forwarded-For" \
+    NGINX_TRUSTED_PROXY_CIDRS="10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1/32" \
     NGINX_RESOLVERS="127.0.0.11" \
     NGINX_RESOLVER_VALID=10s
 
@@ -37,9 +42,11 @@ ENV NGINX_CLIENT_MAX_BODY_SIZE=10m \
     NGINX_TCP_NOPUSH=on \
     NGINX_TCP_NODELAY=on \
     NGINX_OPEN_FILE_CACHE="max=1000 inactive=30m" \
-    NGINX_OPEN_FILE_CACHE_VALID=1s \
+    NGINX_OPEN_FILE_CACHE_VALID=30s \
     NGINX_OPEN_FILE_CACHE_MIN_USES=2 \
     NGINX_OUTPUT_BUFFERS="8 16k" \
+    NGINX_KEEPALIVE_TIMEOUT=65 \
+    NGINX_KEEPALIVE_REQUESTS=1000 \
     NGINX_EXPIRES_DYNAMIC=epoch \
     NGINX_EXPIRES_STATIC=epoch \
     NGINX_EXPIRES_DEFAULT=epoch \
@@ -47,11 +54,12 @@ ENV NGINX_CLIENT_MAX_BODY_SIZE=10m \
     NGINX_LIMIT_REQ_BURST=1000 \
     NGINX_GZIP=on \
     NGINX_GZIP_VARY=on \
+    NGINX_GZIP_STATIC=on \
     NGINX_GZIP_COMP_LEVEL=5 \
     NGINX_GZIP_MIN_LENGTH=256 \
     NGINX_DISABLE_SYMLINKS=if_not_owner
 
-ARG BUILD_VERSION=0.0.0-core
+ARG BUILD_VERSION=0.0.0
 ARG BUILD_REV
 ARG BUILD_DATE
 LABEL org.opencontainers.image.title="gecut/nginx/core" \
@@ -65,4 +73,3 @@ LABEL org.opencontainers.image.title="gecut/nginx/core" \
       org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nginx/core" \
       org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nginx/core" \
       org.opencontainers.image.authors="S. MohammadMahdi Zamanian <dev@mm25zamanian.ir> (https://mm25zamanian.ir)"
-

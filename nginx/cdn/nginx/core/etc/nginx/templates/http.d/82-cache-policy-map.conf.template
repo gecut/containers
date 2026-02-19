@@ -1,0 +1,30 @@
+# Cache profile is selected by normalized URI path.
+map $uri $cdn_cache_profile {
+  # Unversioned assets are short-cached to avoid stale content.
+  default static_unversioned;
+
+  # Fingerprinted assets can be cached aggressively.
+  ~*^.+\.[0-9a-f]{6,}\.(?:avif|bmp|css|eot|gif|ico|jpe?g|js|mjs|mp3|mp4|ogg|ogv|otf|pdf|png|svg|ttf|txt|wav|webm|webp|woff2?)$ hashed;
+
+  # HTML shells should always revalidate.
+  ~*^/(?:$|.*\/)$ html;
+  ~*\.html?$ html;
+
+  # JSON artifacts can be cached briefly.
+  ~*\.json$ json;
+}
+
+map $cdn_cache_profile $cdn_cache_control_by_uri {
+  default "$NGINX_CDN_CACHE_UNVERSIONED_STATIC";
+  hashed "$NGINX_CDN_CACHE_HASHED, s-maxage=$NGINX_CDN_S_MAXAGE";
+  html "$NGINX_CDN_CACHE_HTML, s-maxage=$NGINX_CDN_HTML_S_MAXAGE";
+  json "$NGINX_CDN_CACHE_JSON";
+}
+
+map $status $cdn_cache_control {
+  ~^[45] "$NGINX_CDN_CACHE_ERROR";
+  default "$cdn_cache_control_by_uri";
+}
+
+add_header Cache-Control "$cdn_cache_control" always;
+add_header Vary "Accept-Encoding" always;

@@ -37,11 +37,11 @@ jobs:
       max-parallel: 1
       matrix:
         include:
-          - name: nginx
+          - name: nginx/base
             path: nginx/base
-          - name: nginx
+          - name: nginx/core
             path: nginx/core
-          - name: nginx
+          - name: nginx/cdn
             path: nginx/cdn
           - name: nextjs
             path: nextjs/base

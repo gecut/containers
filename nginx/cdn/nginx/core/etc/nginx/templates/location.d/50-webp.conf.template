@@ -1,0 +1,5 @@
+location ~ \.(png|jpe?g)$ {
+  add_header Cache-Control "$cdn_cache_control" always;
+  add_header Vary "Accept,Accept-Encoding" always;
+  try_files $uri$webp_extension $uri =404;
+}

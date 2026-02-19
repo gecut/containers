@@ -19,10 +19,10 @@ open_file_cache_errors   on;
 open_log_file_cache      max=10000 inactive=30s valid=1m min_uses=2;
 
 # During which a keep-alive client connection will stay open on the server side.
-keepalive_timeout   300;
+keepalive_timeout   $NGINX_KEEPALIVE_TIMEOUT;
 # Sets the maximum number of requests that can be served through one keep-alive connection.
 # Closing connections periodically is necessary to free per-connection memory allocations.
-keepalive_requests  1000;
+keepalive_requests  $NGINX_KEEPALIVE_REQUESTS;
 
 types_hash_max_size 2048;
 
