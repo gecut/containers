@@ -4,7 +4,7 @@ map $uri $cdn_cache_profile {
   default static_unversioned;
 
   # Fingerprinted assets can be cached aggressively.
-  ~*^.+\.[0-9a-f]{6,}\.(?:avif|bmp|css|eot|gif|ico|jpe?g|js|mjs|mp3|mp4|ogg|ogv|otf|pdf|png|svg|ttf|txt|wav|webm|webp|woff2?)$ hashed;
+  "~*^.+\.[0-9a-f]{6,}\.(?:avif|bmp|css|eot|gif|ico|jpe?g|js|mjs|mp3|mp4|ogg|ogv|otf|pdf|png|svg|ttf|txt|wav|webm|webp|woff2?)$" hashed;
 
   # HTML shells should always revalidate.
   ~*^/(?:$|.*\/)$ html;
