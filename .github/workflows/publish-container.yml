@@ -57,7 +57,7 @@ jobs:
 
     steps:
       - name: ⤵️ Checkout Repository
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.2
 
       - name: ❔ Check for Relevant File Changes
         id: changes
@@ -95,7 +95,7 @@ jobs:
 
       - name: 🏗 Cache Docker Layers
         if: steps.build_decision.outputs.should_build == 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: /tmp/.buildx-cache
           key: buildx-${{ runner.os }}-${{ matrix.path }}-${{ github.sha }}
