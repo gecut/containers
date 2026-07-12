@@ -7,16 +7,15 @@ RUN chmod +x /scripts/*.sh
 ARG BUILD_VERSION=0.0.0
 ARG BUILD_REV
 ARG BUILD_DATE
-LABEL org.opencontainers.image.title="gecut/nextjs/nexload" \
+LABEL org.opencontainers.image.title="gecut/nextjs/payload" \
       org.opencontainers.image.description="A Next.js image with PayloadCMS support, packaged by Gecut." \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.created=${BUILD_DATE} \
       org.opencontainers.image.revision=${BUILD_REV} \
       org.opencontainers.image.vendor="Gecut" \
-      org.opencontainers.image.source="https://github.com/gecut/containers/tree/main/nextjs/with-payload" \
-      org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nextjs/with-payload" \
-      org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nextjs/with-payload" \
+      org.opencontainers.image.source="https://github.com/gecut/containers/tree/main/nextjs/payload" \
+      org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nextjs/payload" \
+      org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nextjs/payload" \
       org.opencontainers.image.authors="S. MohammadMahdi Zamanian <dev@mm25zamanian.ir> (https://mm25zamanian.ir)"
-
 

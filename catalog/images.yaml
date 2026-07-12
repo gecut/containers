@@ -1,0 +1,271 @@
+# Canonical image catalog for gecut/containers.
+# HT-34 freezes this contract; HT-35 owns schema validation and graph tooling.
+schema_version: 1
+contract_issue: HT-34
+source_of_truth: catalog/images.yaml
+publication_policy:
+  active_registry: ghcr
+  active_registry_host: ghcr.io
+  docker_hub:
+    enabled: false
+    compatibility_ready: true
+    namespace: gecut
+    note: Future mirroring must not rename canonical images or repoint frozen legacy packages.
+canonical_naming:
+  oci_pattern: gecut/{family}/{variant}
+  uniqueness_rule: No two source contexts may claim the same canonical package.
+platforms:
+  active:
+    - linux/amd64
+    - linux/arm64
+compatibility_policy: &compatibility_policy
+  reference: docs/architecture/image-catalog.md#compatibility-contract
+  exact_semver_tags: immutable_pullable
+  sha_tags: immutable_pullable
+  major_minor_latest_tags: moving_convenience_aliases
+  breaking_changes: major
+  backward_compatible_capabilities: minor
+  backward_compatible_fixes: patch
+  independent_versioning: true
+  parent_change_requires_child_release: true
+  alias_digest_alignment: active_aliases_resolve_to_target_release_digest
+  frozen_and_archived: no_compatibility_evolution_or_security_maintenance_commitment
+tag_policy: &tag_policy
+  reference: docs/architecture/image-catalog.md#tag-policy
+  immutable:
+    - exact-semver
+    - sha
+  moving:
+    - major
+    - minor
+    - latest
+  archived_tags: must_not_be_reused_or_repointed
+registries:
+  ghcr:
+    host: ghcr.io
+    enabled: true
+    publication: active
+  docker_hub:
+    host: docker.io
+    enabled: false
+    publication: disabled
+    compatibility: reserved_future_mirror
+build_policy:
+  full_matrix_inputs:
+    - catalog/images.yaml
+    - package.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - tools/catalog/**
+    - tools/bake/**
+    - docker-bake.hcl
+active_images:
+  - id: nginx-base
+    family: nginx
+    variant: base
+    canonical_oci_name: gecut/nginx/base
+    canonical_ghcr_path: ghcr.io/gecut/nginx/base
+    source_context: nginx/base
+    dockerfile: nginx/base/Dockerfile
+    role: NGINX runtime and template-engine foundation.
+    ownership_boundary: Owns entrypoint orchestration, environment-template rendering, NGINX process defaults, and base runtime cleanup only.
+    parent: null
+    initial_version: 1.0.0
+    current_version: 1.0.0
+    platforms: [linux/amd64, linux/arm64]
+    support_status: active
+    publication_registry: ghcr
+    aliases: []
+    documentation_target: nginx/base/README.md
+    consumer_skill_target: skills/nginx/base
+    build_inputs: [nginx/base/**]
+    compatibility: *compatibility_policy
+    tag_policy: *tag_policy
+  - id: nginx-core
+    family: nginx
+    variant: core
+    canonical_oci_name: gecut/nginx/core
+    canonical_ghcr_path: ghcr.io/gecut/nginx/core
+    source_context: nginx/core
+    dockerfile: nginx/core/Dockerfile
+    role: NGINX static-origin profile.
+    ownership_boundary: Owns static serving defaults, security locations, real-IP handling, gzip, optional CORS, WebP, force-domain, rate-limit, healthcheck, and default data behavior inherited by CDN.
+    parent: nginx-base
+    initial_version: 1.0.0
+    current_version: 1.0.0
+    platforms: [linux/amd64, linux/arm64]
+    support_status: active
+    publication_registry: ghcr
+    aliases: []
+    documentation_target: nginx/core/README.md
+    consumer_skill_target: skills/nginx/core
+    build_inputs: [nginx/core/**]
+    compatibility: *compatibility_policy
+    tag_policy: *tag_policy
+  - id: nginx-cdn
+    family: nginx
+    variant: cdn
+    canonical_oci_name: gecut/nginx/cdn
+    canonical_ghcr_path: ghcr.io/gecut/nginx/cdn
+    source_context: nginx/cdn
+    dockerfile: nginx/cdn/Dockerfile
+    role: CDN-focused NGINX cache-policy specialization.
+    ownership_boundary: Owns CDN cache headers, cache-policy maps, ETag behavior, CDN-oriented static defaults, and downstream CDN-origin tuning only.
+    parent: nginx-core
+    initial_version: 1.0.0
+    current_version: 1.0.0
+    platforms: [linux/amd64, linux/arm64]
+    support_status: active
+    publication_registry: ghcr
+    aliases: []
+    documentation_target: nginx/cdn/README.md
+    consumer_skill_target: skills/nginx/cdn
+    build_inputs: [nginx/cdn/**]
+    compatibility: *compatibility_policy
+    tag_policy: *tag_policy
+  - id: nextjs-base
+    family: nextjs
+    variant: base
+    canonical_oci_name: gecut/nextjs/base
+    canonical_ghcr_path: ghcr.io/gecut/nextjs/base
+    source_context: nextjs/base
+    dockerfile: nextjs/base/Dockerfile
+    role: Next.js runtime foundation.
+    ownership_boundary: Owns non-root Next.js runtime setup, shared startup scripts, permission repair, public asset copy, revalidation hook, tini entrypoint, and base Node runtime behavior.
+    parent: null
+    initial_version: 1.0.0
+    current_version: 1.0.0
+    platforms: [linux/amd64, linux/arm64]
+    support_status: active
+    publication_registry: ghcr
+    aliases: []
+    documentation_target: nextjs/base/README.md
+    consumer_skill_target: skills/nextjs/base
+    build_inputs: [nextjs/base/**]
+    compatibility: *compatibility_policy
+    tag_policy: *tag_policy
+  - id: nextjs-prisma
+    family: nextjs
+    variant: prisma
+    canonical_oci_name: gecut/nextjs/prisma
+    canonical_ghcr_path: ghcr.io/gecut/nextjs/prisma
+    source_context: nextjs/prisma
+    dockerfile: nextjs/prisma/Dockerfile
+    role: Next.js runtime with Prisma application-start hook.
+    ownership_boundary: Owns Prisma-specific startup detection and command hook only; shared Next.js runtime behavior belongs to nextjs-base.
+    parent: nextjs-base
+    initial_version: 1.0.0
+    current_version: 1.0.0
+    platforms: [linux/amd64, linux/arm64]
+    support_status: active
+    publication_registry: ghcr
+    aliases: []
+    documentation_target: nextjs/prisma/README.md
+    consumer_skill_target: skills/nextjs/prisma
+    build_inputs: [nextjs/prisma/**]
+    compatibility: *compatibility_policy
+    tag_policy: *tag_policy
+  - id: nextjs-payload
+    family: nextjs
+    variant: payload
+    canonical_oci_name: gecut/nextjs/payload
+    canonical_ghcr_path: ghcr.io/gecut/nextjs/payload
+    source_context: nextjs/payload
+    dockerfile: nextjs/payload/Dockerfile
+    role: Next.js runtime with Payload application-start hook.
+    ownership_boundary: Owns Payload-specific startup detection and command hook only; shared Next.js runtime behavior belongs to nextjs-base.
+    parent: nextjs-base
+    initial_version: 1.0.0
+    current_version: 1.0.0
+    platforms: [linux/amd64, linux/arm64]
+    support_status: active
+    publication_registry: ghcr
+    aliases:
+      - nexload
+    documentation_target: nextjs/payload/README.md
+    consumer_skill_target: skills/nextjs/payload
+    build_inputs: [nextjs/payload/**]
+    compatibility: *compatibility_policy
+    tag_policy: *tag_policy
+legacy_inventory:
+  - name: ghcr.io/gecut/nexload
+    kind: package
+    support_status: active-alias
+    tracks: nextjs-payload
+    evidence:
+      - Pre-HT-36 .github/workflows/publish-container.yml matrix name nexload for nextjs/with-payload
+      - Pre-HT-36 nextjs/with-payload/Dockerfile OCI title gecut/nextjs/nexload
+  - name: ghcr.io/gecut/nextjs
+    kind: package
+    support_status: frozen
+    tracks: null
+    evidence:
+      - .github/workflows/publish-container.yml matrix name nextjs for nextjs/base
+      - Pre-HT-36 nextjs/with-prisma/README.md references legacy Docker Hub package gecut/nextjs
+    policy: Must remain frozen and must not be repointed to another image.
+  - name: ghcr.io/gecut/nextjs/with-prisma
+    kind: documented-image-name
+    support_status: archived-pullable
+    tracks: null
+    evidence:
+      - Pre-HT-36 nextjs/with-prisma/README.md documents ghcr.io/gecut/nextjs/with-prisma
+      - Pre-HT-36 nextjs/with-prisma/Dockerfile OCI title gecut/nextjs/with-prisma
+  - name: ghcr.io/gecut/nextjs/with-payload
+    kind: documented-image-name
+    support_status: archived-pullable
+    tracks: null
+    evidence:
+      - Pre-HT-36 nextjs/with-payload/README.md documents ghcr.io/gecut/nextjs/with-payload
+  - name: docker.io/mm25zamanian/nginx/base
+    kind: disabled-workflow-target
+    support_status: archived-pullable
+    tracks: null
+    evidence:
+      - .github/workflows/publish-container.yml Docker Hub metadata target enable=false
+  - name: docker.io/mm25zamanian/nginx/core
+    kind: disabled-workflow-target
+    support_status: archived-pullable
+    tracks: null
+    evidence:
+      - .github/workflows/publish-container.yml Docker Hub metadata target enable=false
+  - name: docker.io/mm25zamanian/nginx/cdn
+    kind: disabled-workflow-target
+    support_status: archived-pullable
+    tracks: null
+    evidence:
+      - .github/workflows/publish-container.yml Docker Hub metadata target enable=false
+  - name: docker.io/mm25zamanian/nextjs
+    kind: disabled-workflow-target
+    support_status: frozen
+    tracks: null
+    evidence:
+      - .github/workflows/publish-container.yml Docker Hub metadata target enable=false
+  - name: docker.io/mm25zamanian/nexload
+    kind: disabled-workflow-target
+    support_status: archived-pullable
+    tracks: null
+    evidence:
+      - .github/workflows/publish-container.yml Docker Hub metadata target enable=false
+  - name: docker.io/gecut/nextjs
+    kind: documented-legacy-package
+    support_status: frozen
+    tracks: null
+    evidence:
+      - Pre-HT-36 nextjs/with-prisma/README.md Docker Hub badge and link for gecut/nextjs
+registry_inventory_gaps:
+  - registry: ghcr.io
+    blocker: GitHub Packages API returned 401 Unauthorized without credentials in this environment; no registry mutation was attempted.
+    affected_packages:
+      - ghcr.io/gecut/nginx/base
+      - ghcr.io/gecut/nginx/core
+      - ghcr.io/gecut/nginx/cdn
+      - ghcr.io/gecut/nextjs/base
+      - ghcr.io/gecut/nextjs/prisma
+      - ghcr.io/gecut/nextjs/payload
+      - ghcr.io/gecut/nexload
+      - ghcr.io/gecut/nextjs
+out_of_scope:
+  - NGINX reverse-proxy cache mode
+  - Brotli support
+  - active Docker Hub publishing
+  - runtime-managed Prisma or Payload migrations

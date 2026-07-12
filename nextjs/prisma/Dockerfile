@@ -26,7 +26,7 @@ ENTRYPOINT ["/setup.sh"]
 ARG BUILD_VERSION=0.0.0-prisma
 ARG BUILD_REV
 ARG BUILD_DATE
-LABEL org.opencontainers.image.title="gecut/nextjs/with-prisma" \
+LABEL org.opencontainers.image.title="gecut/nextjs/prisma" \
       org.opencontainers.image.description="A Next.js image with Prisma support for database migrations, packaged by Gecut." \
       org.opencontainers.image.base.name="docker.io/library/node:24.2.0-alpine3.21" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
@@ -34,9 +34,8 @@ LABEL org.opencontainers.image.title="gecut/nextjs/with-prisma" \
       org.opencontainers.image.created=${BUILD_DATE} \
       org.opencontainers.image.revision=${BUILD_REV} \
       org.opencontainers.image.vendor="Gecut" \
-      org.opencontainers.image.source="https://github.com/gecut/containers/tree/main/nextjs/with-prisma" \
-      org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nextjs/with-prisma" \
-      org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nextjs/with-prisma" \
+      org.opencontainers.image.source="https://github.com/gecut/containers/tree/main/nextjs/prisma" \
+      org.opencontainers.image.url="https://github.com/gecut/containers/tree/main/nextjs/prisma" \
+      org.opencontainers.image.documentation="https://github.com/gecut/containers/tree/main/nextjs/prisma" \
       org.opencontainers.image.authors="S. MohammadMahdi Zamanian <dev@mm25zamanian.ir> (https://mm25zamanian.ir)"
-
 

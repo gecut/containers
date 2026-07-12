@@ -1,0 +1,75 @@
+name: Release PR
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      channel:
+        type: choice
+        options:
+          - stable
+          - next
+          - rc
+        default: stable
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-pr
+  cancel-in-progress: false
+
+jobs:
+  release-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Prepare release plan
+        run: pnpm --filter @gecut/container-release cli prepare --channel "${{ inputs.channel || 'stable' }}"
+
+      - name: Verify release plan
+        run: pnpm --filter @gecut/container-release cli verify --channel "${{ inputs.channel || 'stable' }}"
+
+      - name: Regenerate Bake file
+        run: pnpm bake:generate
+
+      - name: Create or update Draft Release PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No release changes generated."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -C release/containers
+          git add catalog/images.yaml docker-bake.hcl release/plans .changes/images nginx nextjs
+          git commit -m "chore(release): prepare container release"
+          git push --force-with-lease origin release/containers
+          gh pr view release/containers --json number >/tmp/release-pr.json 2>/dev/null || true
+          if [[ -s /tmp/release-pr.json ]]; then
+            gh pr ready --undo release/containers || true
+          else
+            gh pr create --base main --head release/containers --draft --title "Release containers" --body "Generated container Release PR. Merging this PR authorizes publication."
+          fi

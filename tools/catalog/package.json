@@ -1,0 +1,25 @@
+{
+  "name": "@gecut/container-catalog",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "gecut-catalog": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "yaml": "2.8.2",
+    "zod": "4.2.1"
+  },
+  "devDependencies": {
+    "tsx": "4.21.0"
+  }
+}
