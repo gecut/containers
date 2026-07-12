@@ -1,0 +1,102 @@
+name: Publish Containers
+
+on:
+  pull_request_target:
+    types:
+      - closed
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-containers
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'main' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'release/containers'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merged main
+        uses: actions/checkout@v4.3.1
+        with:
+          ref: main
+          fetch-depth: 2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Find release plan
+        id: plan
+        shell: bash
+        run: |
+          mapfile -t plans < <(git diff --name-only HEAD^ HEAD -- 'release/plans/*.json')
+          if [[ "${#plans[@]}" -ne 1 ]]; then
+            echo "Expected exactly one release plan, found ${#plans[@]}" >&2
+            exit 1
+          fi
+          echo "path=${plans[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: Verify release plan
+        run: pnpm --filter @gecut/container-release cli verify --plan "${{ steps.plan.outputs.path }}"
+
+      - name: Create release build plan
+        run: pnpm --silent --filter @gecut/container-bake cli plan --mode release --release-plan "${{ steps.plan.outputs.path }}" > build-plan.json
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3.9.0
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ github.token }}
+
+      - name: Exact tag preflight
+        shell: bash
+        run: |
+          node -e '
+          const fs = require("node:fs");
+          const plan = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+          for (const image of plan.images) {
+            for (const tag of image.tags) {
+              if (tag.kind === "exact") {
+                const catalog = JSON.parse(fs.readFileSync("build-plan.json", "utf8"));
+                if (!catalog.targets.includes(image.id)) process.exit(1);
+                console.log(`${image.id}:${tag.value}`);
+              }
+            }
+          }
+          ' "${{ steps.plan.outputs.path }}" > /tmp/exact-tags
+          while read -r item; do
+            image="${item%%:*}"
+            version="${item#*:}"
+            path=$(node -e 'const fs=require("node:fs"); const yaml=fs.readFileSync("catalog/images.yaml","utf8"); const id=process.argv[1]; const match=yaml.match(new RegExp("id: " + id + "[\\s\\S]*?canonical_ghcr_path: ([^\\n]+)")); if (!match) process.exit(1); process.stdout.write(match[1].trim())' "$image")
+            if docker buildx imagetools inspect "${path}:${version}" >/dev/null 2>&1; then
+              echo "Exact tag already exists: ${path}:${version}" >&2
+              exit 1
+            fi
+          done < /tmp/exact-tags
+
+      - name: Publish planned targets
+        shell: bash
+        run: |
+          node -e 'const p=require("./build-plan.json"); for (const target of p.targets) console.log(target)' > /tmp/targets
+          while read -r target; do
+            docker buildx bake --file docker-bake.hcl "$target" --push
+          done < /tmp/targets

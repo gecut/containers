@@ -1,0 +1,51 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - codex/containers-infrastructure-modernization
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.3.1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4.4.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Validate Catalog
+        run: pnpm catalog:validate
+
+      - name: Validate Change Fragments
+        run: pnpm changes:validate
+
+      - name: Check Bake Drift
+        run: pnpm bake:check
+
+      - name: Check Workflows
+        uses: rhysd/actionlint@v1.7.9
+
+      - name: Check Whitespace
+        run: git diff --check

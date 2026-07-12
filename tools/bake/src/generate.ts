@@ -15,11 +15,16 @@ export function generateBakeFile(catalog: ImageCatalog): string {
   ];
 
   for (const image of catalog.active_images) {
+    const tags = [
+      `${image.canonical_ghcr_path}:${image.current_version}`,
+      `${image.canonical_ghcr_path}:latest`,
+      ...image.aliases.flatMap((alias) => [`ghcr.io/gecut/${alias}:${image.current_version}`, `ghcr.io/gecut/${alias}:latest`])
+    ];
     lines.push(`target "${image.id}" {`);
     lines.push(`  context = ${JSON.stringify(image.source_context)}`);
     lines.push(`  dockerfile = ${JSON.stringify(image.dockerfile.replace(`${image.source_context}/`, ""))}`);
     lines.push(`  platforms = ${quoteList(image.platforms)}`);
-    lines.push(`  tags = ${quoteList([`${image.canonical_ghcr_path}:${image.current_version}`, `${image.canonical_ghcr_path}:latest`])}`);
+    lines.push(`  tags = ${quoteList(tags)}`);
     lines.push("  args = {");
     lines.push(`    BUILD_VERSION = ${JSON.stringify(image.current_version)}`);
     lines.push("  }");

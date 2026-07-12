@@ -18,7 +18,7 @@ target "nextjs-payload" {
   context = "nextjs/payload"
   dockerfile = "Dockerfile"
   platforms = ["linux/amd64", "linux/arm64"]
-  tags = ["ghcr.io/gecut/nextjs/payload:1.0.0", "ghcr.io/gecut/nextjs/payload:latest"]
+  tags = ["ghcr.io/gecut/nextjs/payload:1.0.0", "ghcr.io/gecut/nextjs/payload:latest", "ghcr.io/gecut/nexload:1.0.0", "ghcr.io/gecut/nexload:latest"]
   args = {
     BUILD_VERSION = "1.0.0"
   }
