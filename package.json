@@ -9,7 +9,9 @@
     "typecheck": "pnpm -r typecheck",
     "catalog:validate": "pnpm --filter @gecut/container-catalog cli validate",
     "catalog:normalize": "pnpm --filter @gecut/container-catalog cli normalize",
-    "catalog:graph": "pnpm --filter @gecut/container-catalog cli graph"
+    "catalog:graph": "pnpm --filter @gecut/container-catalog cli graph",
+    "changes:validate": "pnpm --filter @gecut/container-changes cli validate",
+    "changes:list": "pnpm --filter @gecut/container-changes cli list --json"
   },
   "devDependencies": {
     "@types/node": "25.0.1",
