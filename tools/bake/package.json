@@ -1,0 +1,25 @@
+{
+  "name": "@gecut/container-bake",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "gecut-bake": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@gecut/container-catalog": "workspace:*",
+    "@gecut/container-release": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.21.0"
+  }
+}

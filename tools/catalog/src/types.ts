@@ -27,6 +27,9 @@ export interface ImageCatalog {
   platforms: {
     active: readonly string[];
   };
+  build_policy?: {
+    full_matrix_inputs?: readonly string[];
+  };
   registries: Record<string, Registry>;
   active_images: readonly CatalogImage[];
   legacy_inventory: readonly LegacyInventoryItem[];

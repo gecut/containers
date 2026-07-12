@@ -50,6 +50,15 @@ registries:
     enabled: false
     publication: disabled
     compatibility: reserved_future_mirror
+build_policy:
+  full_matrix_inputs:
+    - catalog/images.yaml
+    - package.json
+    - pnpm-lock.yaml
+    - pnpm-workspace.yaml
+    - tools/catalog/**
+    - tools/bake/**
+    - docker-bake.hcl
 active_images:
   - id: nginx-base
     family: nginx
@@ -69,6 +78,7 @@ active_images:
     aliases: []
     documentation_target: nginx/base/README.md
     consumer_skill_target: skills/nginx/base
+    build_inputs: [nginx/base/**]
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
   - id: nginx-core
@@ -89,6 +99,7 @@ active_images:
     aliases: []
     documentation_target: nginx/core/README.md
     consumer_skill_target: skills/nginx/core
+    build_inputs: [nginx/core/**]
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
   - id: nginx-cdn
@@ -109,6 +120,7 @@ active_images:
     aliases: []
     documentation_target: nginx/cdn/README.md
     consumer_skill_target: skills/nginx/cdn
+    build_inputs: [nginx/cdn/**]
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
   - id: nextjs-base
@@ -129,6 +141,7 @@ active_images:
     aliases: []
     documentation_target: nextjs/base/README.md
     consumer_skill_target: skills/nextjs/base
+    build_inputs: [nextjs/base/**]
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
   - id: nextjs-prisma
@@ -149,6 +162,7 @@ active_images:
     aliases: []
     documentation_target: nextjs/prisma/README.md
     consumer_skill_target: skills/nextjs/prisma
+    build_inputs: [nextjs/prisma/**]
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
   - id: nextjs-payload
@@ -170,6 +184,7 @@ active_images:
       - nexload
     documentation_target: nextjs/payload/README.md
     consumer_skill_target: skills/nextjs/payload
+    build_inputs: [nextjs/payload/**]
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
 legacy_inventory:

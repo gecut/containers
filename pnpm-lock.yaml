@@ -25,6 +25,19 @@ importers:
         specifier: 4.0.15
         version: 4.0.15(@types/node@25.0.1)(tsx@4.21.0)(yaml@2.8.2)
 
+  tools/bake:
+    dependencies:
+      '@gecut/container-catalog':
+        specifier: workspace:*
+        version: link:../catalog
+      '@gecut/container-release':
+        specifier: workspace:*
+        version: link:../release
+    devDependencies:
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
+
   tools/catalog:
     dependencies:
       yaml:

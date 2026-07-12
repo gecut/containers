@@ -54,6 +54,9 @@ export const imageCatalogSchema = z.object({
   compatibility_policy: recordSchema.optional(),
   tag_policy: recordSchema.optional(),
   registries: z.record(z.string(), registrySchema),
+  build_policy: z.object({
+    full_matrix_inputs: z.array(z.string()).optional()
+  }).optional(),
   active_images: z.array(catalogImageSchema).nonempty(),
   legacy_inventory: z.array(legacyInventoryItemSchema),
   registry_inventory_gaps: z.array(recordSchema).optional(),
