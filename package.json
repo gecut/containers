@@ -11,7 +11,9 @@
     "catalog:normalize": "pnpm --filter @gecut/container-catalog cli normalize",
     "catalog:graph": "pnpm --filter @gecut/container-catalog cli graph",
     "changes:validate": "pnpm --filter @gecut/container-changes cli validate",
-    "changes:list": "pnpm --filter @gecut/container-changes cli list --json"
+    "changes:list": "pnpm --filter @gecut/container-changes cli list --json",
+    "release:plan": "pnpm --filter @gecut/container-release cli plan",
+    "release:verify": "pnpm --filter @gecut/container-release cli verify"
   },
   "devDependencies": {
     "@types/node": "25.0.1",

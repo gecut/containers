@@ -12,6 +12,12 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "noUncheckedIndexedAccess": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@gecut/container-catalog": ["tools/catalog/src/index.ts"],
+      "@gecut/container-changes": ["tools/changes/src/index.ts"],
+      "@gecut/container-release": ["tools/release/src/index.ts"]
+    }
   }
 }

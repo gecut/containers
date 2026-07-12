@@ -1,0 +1,25 @@
+{
+  "name": "@gecut/container-release",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "gecut-release": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "cli": "tsx src/cli.ts"
+  },
+  "dependencies": {
+    "@gecut/container-catalog": "workspace:*",
+    "@gecut/container-changes": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "4.21.0"
+  }
+}
