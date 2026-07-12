@@ -33,7 +33,7 @@ A minimal, secure, and extensible Docker base image to run combined Next.js and 
 
 ```docker
 # Base runner image
-FROM ghcr.io/gecut/nextjs/with-payload:latest
+FROM ghcr.io/gecut/nextjs/payload:latest
 
 # Copy application code
 COPY . .

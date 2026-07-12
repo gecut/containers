@@ -12,5 +12,5 @@ Container images and base runtimes for the Gecut stack.
 ## Next.js Stack
 
 - [Next.js Base](./nextjs/base/README.md)
-- [Next.js with Prisma](./nextjs/with-prisma/README.md)
-- [Next.js with Payload](./nextjs/with-payload/README.md)
+- [Next.js Prisma](./nextjs/prisma/README.md)
+- [Next.js Payload](./nextjs/payload/README.md)

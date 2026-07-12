@@ -1,13 +1,13 @@
-# Production-Grade Docker Image for Next.js (with Prisma)
+# Production-Grade Docker Image for Next.js Prisma
 
 A highly flexible, secure, and production-ready Docker base image for Next.js applications, with first-class support for Prisma.
 
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](https://github.com/gecut/nextjs/blob/main/LICENSE)
-[![Docker Pulls](https://img.shields.io/docker/pulls/gecut/nextjs.svg?style=flat-square)](https://hub.docker.com/r/gecut/nextjs)
+[![GHCR](https://img.shields.io/badge/registry-ghcr.io%2Fgecut%2Fnextjs%2Fprisma-blue?style=flat-square)](https://github.com/gecut/containers/pkgs/container/nextjs%2Fprisma)
 [![GitHub stars](https://img.shields.io/github/stars/gecut/nextjs.svg?style=flat-square)](https://github.com/gecut/nextjs/stargazers)
 [![GitHub issues](https://img.shields.io/github/issues/gecut/nextjs.svg?style=flat-square)](https://github.com/gecut/nextjs/issues)
 
-**Docker Hub Image:** `ghcr.io/gecut/nextjs/with-prisma:<tag>`
+**GHCR Image:** `ghcr.io/gecut/nextjs/prisma:<tag>`
 
 ---
 
@@ -57,7 +57,7 @@ Create a `Dockerfile` in the root of your Next.js project with the following con
 
 ```docker
 # Use the desired version tag. Using 'latest' is convenient but pinning to a specific version is safer for production.
-FROM ghcr.io/gecut/nextjs/with-prisma:latest
+FROM ghcr.io/gecut/nextjs/prisma:latest
 
 # Copy your application code into the image.
 # The base image knows where to put it.

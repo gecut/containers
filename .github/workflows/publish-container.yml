@@ -43,12 +43,12 @@ jobs:
             path: nginx/core
           - name: nginx/cdn
             path: nginx/cdn
-          - name: nextjs
+          - name: nextjs/base
             path: nextjs/base
-          - name: nextjs
-            path: nextjs/with-prisma
-          - name: nexload
-            path: nextjs/with-payload
+          - name: nextjs/prisma
+            path: nextjs/prisma
+          - name: nextjs/payload
+            path: nextjs/payload
 
     permissions:
       contents: read

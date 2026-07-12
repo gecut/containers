@@ -132,8 +132,8 @@ active_images:
     variant: prisma
     canonical_oci_name: gecut/nextjs/prisma
     canonical_ghcr_path: ghcr.io/gecut/nextjs/prisma
-    source_context: nextjs/with-prisma
-    dockerfile: nextjs/with-prisma/Dockerfile
+    source_context: nextjs/prisma
+    dockerfile: nextjs/prisma/Dockerfile
     role: Next.js runtime with Prisma application-start hook.
     ownership_boundary: Owns Prisma-specific startup detection and command hook only; shared Next.js runtime behavior belongs to nextjs-base.
     parent: nextjs-base
@@ -142,7 +142,7 @@ active_images:
     support_status: active
     publication_registry: ghcr
     aliases: []
-    documentation_target: nextjs/with-prisma/README.md
+    documentation_target: nextjs/prisma/README.md
     consumer_skill_target: skills/nextjs/prisma
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
@@ -151,8 +151,8 @@ active_images:
     variant: payload
     canonical_oci_name: gecut/nextjs/payload
     canonical_ghcr_path: ghcr.io/gecut/nextjs/payload
-    source_context: nextjs/with-payload
-    dockerfile: nextjs/with-payload/Dockerfile
+    source_context: nextjs/payload
+    dockerfile: nextjs/payload/Dockerfile
     role: Next.js runtime with Payload application-start hook.
     ownership_boundary: Owns Payload-specific startup detection and command hook only; shared Next.js runtime behavior belongs to nextjs-base.
     parent: nextjs-base
@@ -162,7 +162,7 @@ active_images:
     publication_registry: ghcr
     aliases:
       - nexload
-    documentation_target: nextjs/with-payload/README.md
+    documentation_target: nextjs/payload/README.md
     consumer_skill_target: skills/nextjs/payload
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
@@ -172,29 +172,29 @@ legacy_inventory:
     support_status: active-alias
     tracks: nextjs-payload
     evidence:
-      - .github/workflows/publish-container.yml matrix name nexload for nextjs/with-payload
-      - nextjs/with-payload/Dockerfile OCI title gecut/nextjs/nexload
+      - Pre-HT-36 .github/workflows/publish-container.yml matrix name nexload for nextjs/with-payload
+      - Pre-HT-36 nextjs/with-payload/Dockerfile OCI title gecut/nextjs/nexload
   - name: ghcr.io/gecut/nextjs
     kind: package
     support_status: frozen
     tracks: null
     evidence:
       - .github/workflows/publish-container.yml matrix name nextjs for nextjs/base
-      - nextjs/with-prisma/README.md references legacy Docker Hub package gecut/nextjs
+      - Pre-HT-36 nextjs/with-prisma/README.md references legacy Docker Hub package gecut/nextjs
     policy: Must remain frozen and must not be repointed to another image.
   - name: ghcr.io/gecut/nextjs/with-prisma
     kind: documented-image-name
     support_status: archived-pullable
     tracks: null
     evidence:
-      - nextjs/with-prisma/README.md documents ghcr.io/gecut/nextjs/with-prisma
-      - nextjs/with-prisma/Dockerfile OCI title gecut/nextjs/with-prisma
+      - Pre-HT-36 nextjs/with-prisma/README.md documents ghcr.io/gecut/nextjs/with-prisma
+      - Pre-HT-36 nextjs/with-prisma/Dockerfile OCI title gecut/nextjs/with-prisma
   - name: ghcr.io/gecut/nextjs/with-payload
     kind: documented-image-name
     support_status: archived-pullable
     tracks: null
     evidence:
-      - nextjs/with-payload/README.md documents ghcr.io/gecut/nextjs/with-payload
+      - Pre-HT-36 nextjs/with-payload/README.md documents ghcr.io/gecut/nextjs/with-payload
   - name: docker.io/mm25zamanian/nginx/base
     kind: disabled-workflow-target
     support_status: archived-pullable
@@ -230,7 +230,7 @@ legacy_inventory:
     support_status: frozen
     tracks: null
     evidence:
-      - nextjs/with-prisma/README.md Docker Hub badge and link for gecut/nextjs
+      - Pre-HT-36 nextjs/with-prisma/README.md Docker Hub badge and link for gecut/nextjs
 registry_inventory_gaps:
   - registry: ghcr.io
     blocker: GitHub Packages API returned 401 Unauthorized without credentials in this environment; no registry mutation was attempted.

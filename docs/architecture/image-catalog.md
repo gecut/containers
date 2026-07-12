@@ -18,8 +18,8 @@ Exactly six GHCR packages are active. Every active image starts independent SemV
 | `nginx-core` | `ghcr.io/gecut/nginx/core` | `nginx/core` | `nginx-base` | NGINX static-origin profile | Static serving defaults, security locations, real-IP handling, gzip, optional CORS, WebP, force-domain, rate-limit, healthcheck, and default data behavior inherited by CDN. |
 | `nginx-cdn` | `ghcr.io/gecut/nginx/cdn` | `nginx/cdn` | `nginx-core` | CDN-focused NGINX cache-policy specialization | CDN cache headers, cache-policy maps, ETag behavior, CDN-oriented static defaults, and downstream CDN-origin tuning only. |
 | `nextjs-base` | `ghcr.io/gecut/nextjs/base` | `nextjs/base` | none | Next.js runtime foundation | Non-root Next.js runtime setup, shared startup scripts, permission repair, public asset copy, revalidation hook, tini entrypoint, and base Node runtime behavior. |
-| `nextjs-prisma` | `ghcr.io/gecut/nextjs/prisma` | `nextjs/with-prisma` | `nextjs-base` | Next.js runtime with Prisma application-start hook | Prisma-specific startup detection and command hook only; shared Next.js runtime behavior belongs to `nextjs-base`. |
-| `nextjs-payload` | `ghcr.io/gecut/nextjs/payload` | `nextjs/with-payload` | `nextjs-base` | Next.js runtime with Payload application-start hook | Payload-specific startup detection and command hook only; shared Next.js runtime behavior belongs to `nextjs-base`. |
+| `nextjs-prisma` | `ghcr.io/gecut/nextjs/prisma` | `nextjs/prisma` | `nextjs-base` | Next.js runtime with Prisma application-start hook | Prisma-specific startup detection and command hook only; shared Next.js runtime behavior belongs to `nextjs-base`. |
+| `nextjs-payload` | `ghcr.io/gecut/nextjs/payload` | `nextjs/payload` | `nextjs-base` | Next.js runtime with Payload application-start hook | Payload-specific startup detection and command hook only; shared Next.js runtime behavior belongs to `nextjs-base`. |
 
 ### Inheritance model
 
@@ -65,10 +65,10 @@ Every non-canonical item discovered from repository directories, Dockerfiles, wo
 
 | Item | Classification | Evidence | Policy |
 | --- | --- | --- | --- |
-| `ghcr.io/gecut/nexload` | `active-alias` | Workflow matrix names `nexload` for `nextjs/with-payload`; Payload Dockerfile labels the image title as `gecut/nextjs/nexload`. | Tracks `ghcr.io/gecut/nextjs/payload` and must resolve to the same intended release/digest. |
-| `ghcr.io/gecut/nextjs` | `frozen` | Workflow matrix names `nextjs` for `nextjs/base`; Prisma README references legacy `gecut/nextjs` Docker Hub package. | Remains pullable at existing state and must not be repointed. |
-| `ghcr.io/gecut/nextjs/with-prisma` | `archived-pullable` | Prisma README documents `ghcr.io/gecut/nextjs/with-prisma`; Prisma Dockerfile labels `gecut/nextjs/with-prisma`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
-| `ghcr.io/gecut/nextjs/with-payload` | `archived-pullable` | Payload README documents `ghcr.io/gecut/nextjs/with-payload`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
+| `ghcr.io/gecut/nexload` | `active-alias` | Pre-HT-36 workflow matrix named `nexload` for `nextjs/with-payload`; pre-HT-36 Payload Dockerfile labeled the image title as `gecut/nextjs/nexload`. | Tracks `ghcr.io/gecut/nextjs/payload` and must resolve to the same intended release/digest. |
+| `ghcr.io/gecut/nextjs` | `frozen` | Workflow matrix named `nextjs` for `nextjs/base`; pre-HT-36 Prisma README referenced legacy `gecut/nextjs` Docker Hub package. | Remains pullable at existing state and must not be repointed. |
+| `ghcr.io/gecut/nextjs/with-prisma` | `archived-pullable` | Pre-HT-36 Prisma README documented `ghcr.io/gecut/nextjs/with-prisma`; pre-HT-36 Prisma Dockerfile labeled `gecut/nextjs/with-prisma`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
+| `ghcr.io/gecut/nextjs/with-payload` | `archived-pullable` | Pre-HT-36 Payload README documented `ghcr.io/gecut/nextjs/with-payload`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
 | `docker.io/mm25zamanian/nginx/base` | `archived-pullable` | Workflow metadata includes disabled Docker Hub target `docker.io/mm25zamanian/${matrix.name}`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
 | `docker.io/mm25zamanian/nginx/core` | `archived-pullable` | Workflow metadata includes disabled Docker Hub target `docker.io/mm25zamanian/${matrix.name}`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
 | `docker.io/mm25zamanian/nginx/cdn` | `archived-pullable` | Workflow metadata includes disabled Docker Hub target `docker.io/mm25zamanian/${matrix.name}`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
