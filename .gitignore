@@ -15,8 +15,11 @@ Desktop.ini
 
 # Build
 dist
+dist/
 build
+coverage/
 .tsbuildinfo
+*.tsbuildinfo
 *.map
 *.d.ts
 *.js
@@ -25,6 +28,7 @@ build
 
 # Dependencies
 node_modules
+node_modules/
 package-lock.json
 
 # Output of 'npm pack'

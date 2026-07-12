@@ -1,0 +1,23 @@
+{
+  "name": "@gecut/containers",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.26.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "catalog:validate": "pnpm --filter @gecut/container-catalog cli validate",
+    "catalog:normalize": "pnpm --filter @gecut/container-catalog cli normalize",
+    "catalog:graph": "pnpm --filter @gecut/container-catalog cli graph"
+  },
+  "devDependencies": {
+    "@types/node": "25.0.1",
+    "typescript": "5.9.3",
+    "vitest": "4.0.15"
+  },
+  "dependencies": {
+    "yaml": "2.8.2",
+    "zod": "4.2.1"
+  }
+}

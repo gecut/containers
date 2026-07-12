@@ -62,6 +62,7 @@ active_images:
     ownership_boundary: Owns entrypoint orchestration, environment-template rendering, NGINX process defaults, and base runtime cleanup only.
     parent: null
     initial_version: 1.0.0
+    current_version: 1.0.0
     platforms: [linux/amd64, linux/arm64]
     support_status: active
     publication_registry: ghcr
@@ -81,6 +82,7 @@ active_images:
     ownership_boundary: Owns static serving defaults, security locations, real-IP handling, gzip, optional CORS, WebP, force-domain, rate-limit, healthcheck, and default data behavior inherited by CDN.
     parent: nginx-base
     initial_version: 1.0.0
+    current_version: 1.0.0
     platforms: [linux/amd64, linux/arm64]
     support_status: active
     publication_registry: ghcr
@@ -100,6 +102,7 @@ active_images:
     ownership_boundary: Owns CDN cache headers, cache-policy maps, ETag behavior, CDN-oriented static defaults, and downstream CDN-origin tuning only.
     parent: nginx-core
     initial_version: 1.0.0
+    current_version: 1.0.0
     platforms: [linux/amd64, linux/arm64]
     support_status: active
     publication_registry: ghcr
@@ -119,6 +122,7 @@ active_images:
     ownership_boundary: Owns non-root Next.js runtime setup, shared startup scripts, permission repair, public asset copy, revalidation hook, tini entrypoint, and base Node runtime behavior.
     parent: null
     initial_version: 1.0.0
+    current_version: 1.0.0
     platforms: [linux/amd64, linux/arm64]
     support_status: active
     publication_registry: ghcr
@@ -138,6 +142,7 @@ active_images:
     ownership_boundary: Owns Prisma-specific startup detection and command hook only; shared Next.js runtime behavior belongs to nextjs-base.
     parent: nextjs-base
     initial_version: 1.0.0
+    current_version: 1.0.0
     platforms: [linux/amd64, linux/arm64]
     support_status: active
     publication_registry: ghcr
@@ -157,6 +162,7 @@ active_images:
     ownership_boundary: Owns Payload-specific startup detection and command hook only; shared Next.js runtime behavior belongs to nextjs-base.
     parent: nextjs-base
     initial_version: 1.0.0
+    current_version: 1.0.0
     platforms: [linux/amd64, linux/arm64]
     support_status: active
     publication_registry: ghcr
