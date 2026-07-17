@@ -25,10 +25,10 @@ jobs:
       nginx: ${{ steps.filter.outputs.nginx || steps.all.outputs.nginx }}
       nextjs: ${{ steps.filter.outputs.nextjs || steps.all.outputs.nextjs }}
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - id: filter
         if: github.event_name == 'push' || github.event_name == 'pull_request'
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050 # v3
         with:
           filters: |
             nginx:
@@ -51,7 +51,7 @@ jobs:
     if: needs.changes.outputs.nginx == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install shell validation tools
         run: sudo apt-get update && sudo apt-get install -y shellcheck
@@ -63,11 +63,17 @@ jobs:
           find nginx tests/nginx -type f -name '*.sh' -print0 | xargs -0 shellcheck
           ruby -e 'require "yaml"; YAML.safe_load(File.read("catalog/images.yaml"), permitted_classes: [], permitted_symbols: [], aliases: true); YAML.safe_load(File.read(".github/workflows/publish-container.yml"), permitted_classes: [], permitted_symbols: [], aliases: true)'
 
+      - name: Lint GitHub Actions workflow
+        run: |
+          docker run --rm --volume "$PWD:/repo:ro" --workdir /repo \
+            docker.io/rhysd/actionlint:1.7.7@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9 \
+            .github/workflows/publish-container.yml
+
       - name: Lint Dockerfiles
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          recursive: true
-          dockerfile: nginx
+        run: |
+          docker run --rm --volume "$PWD:/work:ro" --workdir /work \
+            ghcr.io/hadolint/hadolint:v2.14.0-debian@sha256:158cd0184dcaa18bd8ec20b61f4c1cabdf8b32a592d062f57bdcb8e4c1d312e2 \
+            nginx/base/Dockerfile nginx/core/Dockerfile nginx/cdn/Dockerfile nginx/spa/Dockerfile
 
       - name: Build dependency closure locally
         env:
@@ -100,24 +106,27 @@ jobs:
     needs: [changes, nginx-test]
     if: github.event_name != 'pull_request' && (needs.changes.outputs.nginx == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
+    concurrency:
+      group: nginx-publish
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4.2.2
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ env.REGISTRY_USER }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v3.8.1
+        uses: sigstore/cosign-installer@053f9b74638557590800a301da1ba82351507e2c # v3.8.1
 
       - name: Build and push temporary multi-platform closure
         env:
@@ -162,9 +171,13 @@ jobs:
       - name: Scan temporary images
         run: |
           set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/trivy-cache"
           for image in "$BASE_DIGEST_REF" "$CORE_DIGEST_REF" "$CDN_DIGEST_REF" "$SPA_DIGEST_REF"; do
-            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.67.2 image \
-              --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL "$image"
+            docker run --rm \
+              --volume "$HOME/.docker:/root/.docker:ro" \
+              --volume "$RUNNER_TEMP/trivy-cache:/root/.cache/trivy" \
+              docker.io/aquasec/trivy:0.67.2@sha256:e2b22eac59c02003d8749f5b8d9bd073b62e30fefaef5b7c8371204e0a4b0c08 \
+              image --scanners vuln --exit-code 1 --exit-on-eol 1 --severity HIGH,CRITICAL "$image"
           done
 
       - name: Sign immutable digests
@@ -228,6 +241,37 @@ jobs:
           promote_release "$CDN_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/cdn" "$NGINX_CDN_VERSION"
           promote_release "$SPA_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/spa" "$NGINX_SPA_VERSION"
 
+      - name: Verify promoted digests
+        run: |
+          set -euo pipefail
+          assert_digest() {
+            expected_ref=$1
+            promoted_ref=$2
+            expected=${expected_ref##*@}
+            actual=$(docker buildx imagetools inspect "$promoted_ref" | awk '/^Digest:/ { print $2; exit }')
+            if [ "$actual" != "$expected" ]; then
+              echo >&2 "$promoted_ref resolved to $actual, expected signed digest $expected"
+              exit 1
+            fi
+          }
+          sha_tag="sha-${GITHUB_SHA::12}"
+          verify_image() {
+            digest_ref=$1
+            repository=$2
+            assert_digest "$digest_ref" "$repository:$sha_tag"
+            assert_digest "$digest_ref" "$repository:latest"
+          }
+          verify_image "$BASE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/base"
+          verify_image "$CORE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/core"
+          verify_image "$CDN_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/cdn"
+          verify_image "$SPA_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/spa"
+          if [ "$GITHUB_EVENT_NAME" = release ]; then
+            assert_digest "$BASE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/base:$NGINX_BASE_VERSION"
+            assert_digest "$CORE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/core:$NGINX_CORE_VERSION"
+            assert_digest "$CDN_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/cdn:$NGINX_CDN_VERSION"
+            assert_digest "$SPA_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/spa:$NGINX_SPA_VERSION"
+          fi
+
   nextjs-publish:
     needs: changes
     if: needs.changes.outputs.nextjs == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
@@ -248,11 +292,11 @@ jobs:
       packages: write
       id-token: write
     steps:
-      - uses: actions/checkout@v4.2.2
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
         with:
           registry: ghcr.io
           username: ${{ env.REGISTRY_USER }}
@@ -262,7 +306,7 @@ jobs:
           version=$(grep 'ARG BUILD_VERSION' "${{ matrix.path }}/Dockerfile" | cut -d= -f2)
           echo "version=$version" >> "$GITHUB_OUTPUT"
       - id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
         with:
           images: ghcr.io/${{ env.REGISTRY_USER }}/${{ matrix.name }}
           tags: |
@@ -271,7 +315,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=sha,prefix=,format=short
       - id: build-nextjs
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ${{ matrix.path }}
           push: ${{ github.event_name != 'pull_request' }}
@@ -284,7 +328,7 @@ jobs:
             BUILD_REV=${{ github.sha }}
       - name: Install Cosign
         if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@v3.8.1
+        uses: sigstore/cosign-installer@053f9b74638557590800a301da1ba82351507e2c # v3.8.1
       - name: Sign Next.js image digest
         if: github.event_name != 'pull_request'
         run: cosign sign --yes "ghcr.io/${{ env.REGISTRY_USER }}/${{ matrix.name }}@${{ steps.build-nextjs.outputs.digest }}"
