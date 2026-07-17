@@ -60,6 +60,12 @@ Parent changes that affect a child require a new child release. The release mech
 
 Exact SemVer tags such as `1.0.0` and SHA tags are immutable. Major tags, minor tags, and `latest` are moving convenience aliases governed by release policy. Archived tags must not be reused or repointed.
 
+Every successful image publication expands its configured `major.minor.patch`
+version into three pullable tags. For example, `2.3.4` publishes immutable
+patch tag `2.3.4` and updates the moving compatibility aliases `2.3` and `2`.
+Publishing new content without incrementing the patch version fails preflight
+instead of overwriting the existing exact tag.
+
 ## Legacy inventory and support classification
 
 Every non-canonical item discovered from repository directories, Dockerfiles, workflow references, documentation, scripts, and available registry checks is classified as exactly one of `active-alias`, `frozen`, or `archived-pullable`.

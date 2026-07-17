@@ -194,19 +194,28 @@ jobs:
       - name: Preflight immutable tags
         run: |
           set -euo pipefail
+          validate_version() {
+            version=$1
+            if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo >&2 "$version is not a valid major.minor.patch version"
+              exit 1
+            fi
+          }
+          validate_version "$NGINX_BASE_VERSION"
+          validate_version "$NGINX_CORE_VERSION"
+          validate_version "$NGINX_CDN_VERSION"
+          validate_version "$NGINX_SPA_VERSION"
+
           sha_tag="sha-${GITHUB_SHA::12}"
           references="
           $REGISTRY/$REGISTRY_USER/nginx/base:$sha_tag
           $REGISTRY/$REGISTRY_USER/nginx/core:$sha_tag
           $REGISTRY/$REGISTRY_USER/nginx/cdn:$sha_tag
-          $REGISTRY/$REGISTRY_USER/nginx/spa:$sha_tag"
-          if [ "$GITHUB_EVENT_NAME" = release ]; then
-            references="$references
-            $REGISTRY/$REGISTRY_USER/nginx/base:$NGINX_BASE_VERSION
-            $REGISTRY/$REGISTRY_USER/nginx/core:$NGINX_CORE_VERSION
-            $REGISTRY/$REGISTRY_USER/nginx/cdn:$NGINX_CDN_VERSION
-            $REGISTRY/$REGISTRY_USER/nginx/spa:$NGINX_SPA_VERSION"
-          fi
+          $REGISTRY/$REGISTRY_USER/nginx/spa:$sha_tag
+          $REGISTRY/$REGISTRY_USER/nginx/base:$NGINX_BASE_VERSION
+          $REGISTRY/$REGISTRY_USER/nginx/core:$NGINX_CORE_VERSION
+          $REGISTRY/$REGISTRY_USER/nginx/cdn:$NGINX_CDN_VERSION
+          $REGISTRY/$REGISTRY_USER/nginx/spa:$NGINX_SPA_VERSION"
           for reference in $references; do
             if docker buildx imagetools inspect "$reference" >/dev/null 2>&1; then
               echo >&2 "$reference already exists; immutable tags are never overwritten"
@@ -214,7 +223,32 @@ jobs:
             fi
           done
 
-      - name: Promote SHA and moving aliases
+      - name: Promote version tags
+        run: |
+          set -euo pipefail
+          promote_version() {
+            source=$1
+            repository=$2
+            version=$3
+            if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo >&2 "$version is not a valid major.minor.patch version"
+              exit 1
+            fi
+            major_tag=${version%%.*}
+            minor_tag=${version%.*}
+            patch_tag=$version
+            docker buildx imagetools create \
+              -t "$repository:$patch_tag" \
+              -t "$repository:$minor_tag" \
+              -t "$repository:$major_tag" \
+              "$source"
+          }
+          promote_version "$BASE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/base" "$NGINX_BASE_VERSION"
+          promote_version "$CORE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/core" "$NGINX_CORE_VERSION"
+          promote_version "$CDN_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/cdn" "$NGINX_CDN_VERSION"
+          promote_version "$SPA_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/spa" "$NGINX_SPA_VERSION"
+
+      - name: Promote SHA and latest tags
         run: |
           set -euo pipefail
           sha_tag="sha-${GITHUB_SHA::12}"
@@ -222,28 +256,6 @@ jobs:
           docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/core:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/core:latest" "$CORE_TEMP"
           docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/cdn:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/cdn:latest" "$CDN_TEMP"
           docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/spa:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/spa:latest" "$SPA_TEMP"
-
-      - name: Promote immutable release versions
-        if: github.event_name == 'release'
-        run: |
-          set -euo pipefail
-          promote_release() {
-            source=$1
-            repository=$2
-            version=$3
-            major=${version%%.*}
-            remainder=${version#*.}
-            minor=${remainder%%.*}
-            if docker buildx imagetools inspect "$repository:$version" >/dev/null 2>&1; then
-              echo >&2 "$repository:$version already exists; immutable tags are never overwritten"
-              exit 1
-            fi
-            docker buildx imagetools create -t "$repository:$version" -t "$repository:$major.$minor" -t "$repository:$major" "$source"
-          }
-          promote_release "$BASE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/base" "$NGINX_BASE_VERSION"
-          promote_release "$CORE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/core" "$NGINX_CORE_VERSION"
-          promote_release "$CDN_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/cdn" "$NGINX_CDN_VERSION"
-          promote_release "$SPA_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/spa" "$NGINX_SPA_VERSION"
 
       - name: Verify promoted digests
         run: |
@@ -265,19 +277,23 @@ jobs:
           verify_image() {
             digest_ref=$1
             repository=$2
+            version=$3
+            if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo >&2 "$version is not a valid major.minor.patch version"
+              exit 1
+            fi
+            major_tag=${version%%.*}
+            minor_tag=${version%.*}
             assert_digest "$digest_ref" "$repository:$sha_tag"
             assert_digest "$digest_ref" "$repository:latest"
+            assert_digest "$digest_ref" "$repository:$major_tag"
+            assert_digest "$digest_ref" "$repository:$minor_tag"
+            assert_digest "$digest_ref" "$repository:$version"
           }
-          verify_image "$BASE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/base"
-          verify_image "$CORE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/core"
-          verify_image "$CDN_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/cdn"
-          verify_image "$SPA_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/spa"
-          if [ "$GITHUB_EVENT_NAME" = release ]; then
-            assert_digest "$BASE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/base:$NGINX_BASE_VERSION"
-            assert_digest "$CORE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/core:$NGINX_CORE_VERSION"
-            assert_digest "$CDN_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/cdn:$NGINX_CDN_VERSION"
-            assert_digest "$SPA_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/spa:$NGINX_SPA_VERSION"
-          fi
+          verify_image "$BASE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/base" "$NGINX_BASE_VERSION"
+          verify_image "$CORE_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/core" "$NGINX_CORE_VERSION"
+          verify_image "$CDN_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/cdn" "$NGINX_CDN_VERSION"
+          verify_image "$SPA_DIGEST_REF" "$REGISTRY/$REGISTRY_USER/nginx/spa" "$NGINX_SPA_VERSION"
 
   nextjs-publish:
     needs: changes

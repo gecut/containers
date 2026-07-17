@@ -15,6 +15,20 @@ grep -q 'ARG BUILD_VERSION=2.0.0' "$ROOT/nginx/cdn/Dockerfile"
 grep -q 'ARG BUILD_VERSION=1.0.0' "$ROOT/nginx/spa/Dockerfile"
 grep -q 'parent: nginx-cdn' "$ROOT/catalog/images.yaml"
 
+for variable in NGINX_BASE_VERSION NGINX_CORE_VERSION NGINX_CDN_VERSION NGINX_SPA_VERSION; do
+  version=$(sed -n "s/^[[:space:]]*$variable:[[:space:]]*//p" "$ROOT/.github/workflows/publish-container.yml")
+  printf '%s\n' "$version" | grep -Eq '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$' || {
+    echo >&2 "$variable must use major.minor.patch"
+    exit 1
+  }
+done
+
+grep -q "major_tag=\${version%%.*}" "$ROOT/.github/workflows/publish-container.yml"
+grep -q "minor_tag=\${version%.*}" "$ROOT/.github/workflows/publish-container.yml"
+grep -q -- "-t \"\$repository:\$patch_tag\"" "$ROOT/.github/workflows/publish-container.yml"
+grep -q -- "-t \"\$repository:\$minor_tag\"" "$ROOT/.github/workflows/publish-container.yml"
+grep -q -- "-t \"\$repository:\$major_tag\"" "$ROOT/.github/workflows/publish-container.yml"
+
 for dockerfile in base core cdn spa; do
   grep -q "nginx/$dockerfile/Dockerfile" "$ROOT/.github/workflows/publish-container.yml"
 done
