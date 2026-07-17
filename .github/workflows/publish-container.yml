@@ -61,7 +61,7 @@ jobs:
           tests/nginx/static.sh
           ruby tests/nginx/catalog.rb
           find nginx tests/nginx -type f -name '*.sh' -print0 | xargs -0 shellcheck
-          ruby -e 'require "yaml"; YAML.safe_load(File.read("catalog/images.yaml"), [], [], true); YAML.safe_load(File.read(".github/workflows/publish-container.yml"), [], [], true)'
+          ruby -e 'require "yaml"; YAML.safe_load(File.read("catalog/images.yaml"), permitted_classes: [], permitted_symbols: [], aliases: true); YAML.safe_load(File.read(".github/workflows/publish-container.yml"), permitted_classes: [], permitted_symbols: [], aliases: true)'
 
       - name: Lint Dockerfiles
         uses: hadolint/hadolint-action@v3.1.0

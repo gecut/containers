@@ -4,7 +4,12 @@
 require "yaml"
 
 root = File.expand_path("../..", __dir__)
-catalog = YAML.safe_load(File.read(File.join(root, "catalog/images.yaml")), [], [], true)
+catalog = YAML.safe_load(
+  File.read(File.join(root, "catalog/images.yaml")),
+  permitted_classes: [],
+  permitted_symbols: [],
+  aliases: true
+)
 images = catalog.fetch("active_images")
 
 raise "expected seven active images" unless images.length == 7
