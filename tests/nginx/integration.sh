@@ -38,7 +38,7 @@ start() {
   port=$(docker port "$name" 80/tcp | sed -n '1s/.*://p')
   [ -n "$port" ] || { docker logs "$name" >&2; fail "could not discover the published port for $name"; }
   i=0
-  until curl -fsS "http://127.0.0.1:$port/server-info" >/dev/null; do
+  until curl -fsS "http://127.0.0.1:$port/server-info" >/dev/null 2>&1; do
     i=$((i + 1))
     [ "$i" -lt 30 ] || { docker logs "$name" >&2; fail "$name did not become ready"; }
     sleep 1
@@ -103,7 +103,18 @@ assert_header "http://127.0.0.1:$core_port/" X-Content-Type-Options nosniff
 
 start nginx-core-robots-test "$NGINX_CORE_IMAGE" -e NGINX_DISALLOW_ROBOTS=on
 robots_port=$STARTED_PORT
+docker exec nginx-core-robots-test grep -q 'Disallow: /' /data/robots.txt || {
+  docker logs nginx-core-robots-test >&2
+  fail 'Robots disallow toggle did not install /data/robots.txt'
+}
 curl -fsS "http://127.0.0.1:$robots_port/robots.txt" | grep -q 'Disallow: /' || fail 'Robots disallow toggle did not replace the bundled default'
+
+mkdir -p "$WORK/custom-robots"
+printf '%s\n' 'User-agent: *' 'Allow: /public/' > "$WORK/custom-robots/robots.txt"
+start nginx-core-custom-robots-test "$NGINX_CORE_IMAGE" \
+  -e NGINX_DISALLOW_ROBOTS=on -v "$WORK/custom-robots:/data:ro"
+custom_robots_port=$STARTED_PORT
+curl -fsS "http://127.0.0.1:$custom_robots_port/robots.txt" | grep -q 'Allow: /public/' || fail 'Consumer-provided robots.txt was overwritten'
 
 printf '%s\n' 'jpeg' > "$WORK/core/photo.jpg"
 printf '%s\n' 'webp' > "$WORK/core/photo.jpg.webp"

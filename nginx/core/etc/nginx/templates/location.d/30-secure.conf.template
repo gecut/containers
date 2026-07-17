@@ -20,10 +20,12 @@ location ~* \.(engine|inc|info|install|make|module|profile|test|po|sh|.*sql|them
 
 location = /robots.txt {
   access_log off; log_not_found off;
+  try_files $uri =404;
 }
 
 location = /favicon.ico {
   access_log off; log_not_found off;
+  try_files $uri =404;
 }
 
 location ^~ /.well-known/ {
