@@ -73,7 +73,7 @@ jobs:
         run: |
           docker run --rm --volume "$PWD:/work:ro" --workdir /work \
             ghcr.io/hadolint/hadolint:v2.14.0-debian@sha256:158cd0184dcaa18bd8ec20b61f4c1cabdf8b32a592d062f57bdcb8e4c1d312e2 \
-            nginx/base/Dockerfile nginx/core/Dockerfile nginx/cdn/Dockerfile nginx/spa/Dockerfile
+            hadolint nginx/base/Dockerfile nginx/core/Dockerfile nginx/cdn/Dockerfile nginx/spa/Dockerfile
 
       - name: Build dependency closure locally
         env:

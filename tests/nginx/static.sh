@@ -18,6 +18,7 @@ for dockerfile in base core cdn spa; do
   grep -q "nginx/$dockerfile/Dockerfile" "$ROOT/.github/workflows/publish-container.yml"
 done
 grep -q 'ghcr.io/hadolint/hadolint:v2.14.0-debian@sha256:' "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'hadolint nginx/base/Dockerfile nginx/core/Dockerfile nginx/cdn/Dockerfile nginx/spa/Dockerfile' "$ROOT/.github/workflows/publish-container.yml"
 grep -q 'docker.io/rhysd/actionlint:1.7.7@sha256:' "$ROOT/.github/workflows/publish-container.yml"
 grep -q 'docker.io/aquasec/trivy:0.67.2@sha256:' "$ROOT/.github/workflows/publish-container.yml"
 if grep -q 'hadolint/hadolint-action' "$ROOT/.github/workflows/publish-container.yml"; then
