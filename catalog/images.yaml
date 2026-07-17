@@ -108,6 +108,25 @@ active_images:
     consumer_skill_target: skills/nginx/cdn
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
+  - id: nginx-spa
+    family: nginx
+    variant: spa
+    canonical_oci_name: gecut/nginx/spa
+    canonical_ghcr_path: ghcr.io/gecut/nginx/spa
+    source_context: nginx/spa
+    dockerfile: nginx/spa/Dockerfile
+    role: Strict static hosting for single-page applications.
+    ownership_boundary: Owns SPA shell readiness, extensionless route fallback, and real 404 behavior for missing static assets; inherited security and cache policy remain owned by core and CDN.
+    parent: nginx-cdn
+    initial_version: 1.0.0
+    platforms: [linux/amd64, linux/arm64]
+    support_status: active
+    publication_registry: ghcr
+    aliases: []
+    documentation_target: nginx/spa/README.md
+    consumer_skill_target: skills/nginx/spa
+    compatibility: *compatibility_policy
+    tag_policy: *tag_policy
   - id: nextjs-base
     family: nextjs
     variant: base
@@ -200,19 +219,19 @@ legacy_inventory:
     support_status: archived-pullable
     tracks: null
     evidence:
-      - .github/workflows/publish-container.yml Docker Hub metadata target enable=false
+      - Pre-v2 publish workflow contained a disabled docker.io/mm25zamanian/nginx/base target.
   - name: docker.io/mm25zamanian/nginx/core
     kind: disabled-workflow-target
     support_status: archived-pullable
     tracks: null
     evidence:
-      - .github/workflows/publish-container.yml Docker Hub metadata target enable=false
+      - Pre-v2 publish workflow contained a disabled docker.io/mm25zamanian/nginx/core target.
   - name: docker.io/mm25zamanian/nginx/cdn
     kind: disabled-workflow-target
     support_status: archived-pullable
     tracks: null
     evidence:
-      - .github/workflows/publish-container.yml Docker Hub metadata target enable=false
+      - Pre-v2 publish workflow contained a disabled docker.io/mm25zamanian/nginx/cdn target.
   - name: docker.io/mm25zamanian/nextjs
     kind: disabled-workflow-target
     support_status: frozen
@@ -238,6 +257,7 @@ registry_inventory_gaps:
       - ghcr.io/gecut/nginx/base
       - ghcr.io/gecut/nginx/core
       - ghcr.io/gecut/nginx/cdn
+      - ghcr.io/gecut/nginx/spa
       - ghcr.io/gecut/nextjs/base
       - ghcr.io/gecut/nextjs/prisma
       - ghcr.io/gecut/nextjs/payload

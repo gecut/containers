@@ -1,3 +1,0 @@
-real_ip_header    $NGINX_REAL_IP_HEADER;
-real_ip_recursive on;
-include /etc/nginx/conf.d/http.d/10-real-ip-trusted.conf;

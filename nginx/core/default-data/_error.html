@@ -3,9 +3,6 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <!--# if expr="$status = 502" -->
-  <meta http-equiv="refresh" content="2"/>
-  <!--# endif -->
   <title>Error!</title>
   <style>
     html {
@@ -34,15 +31,10 @@
   </style>
 </head>
 <body>
-  <!--# if expr="$status = 502" -->
-    <h1>We are updating our website</h1>
-    <p>This is only for a few seconds, you will be redirected.</p>
-  <!--# else -->
-    <h1>Error <!--# echo var="status" default="0" -->, <!--# echo var="status_text" default="Something goes wrong" --></h1>
+    <h1>Request could not be completed</h1>
     <p>
       Sorry, the page you are looking for is currently unavailable.<br />
       Please try again later.
     </p>
-  <!--# endif -->
 </body>
 </html>

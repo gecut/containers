@@ -1,29 +1,32 @@
-FROM docker.io/library/nginx:1.28.2-alpine-slim
+FROM docker.io/library/nginx:1.30.4-alpine-slim@sha256:ddde39c6e51f02fde7410c2e9c234cf2d0a4c7bdbbe176aeb37d8ad7ab4eb58c
 
-RUN rm -rfv /docker-entrypoint* /etc/nginx/conf.d/* /etc/nginx/nginx.conf /var/www/html /usr/share/nginx/html /data
-COPY etc/nginx/ /etc/nginx/
-RUN chmod a+rx /etc/nginx/entrypoint.sh /etc/nginx/entrypoint.d/*.sh /etc/nginx/entrypoint.d/*.envsh
-# RUN ls -RlAhF /etc/nginx
+RUN rm -rf /etc/nginx/conf.d/* /etc/nginx/nginx.conf /var/www/html /usr/share/nginx/html /data \
+    && mkdir -p /data /etc/nginx/conf.d/http.d /etc/nginx/conf.d/server.d
+COPY etc/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY etc/nginx/templates/ /etc/nginx/templates/
+COPY etc/nginx/entrypoint.d/ /docker-entrypoint.d/
+RUN chmod a+rx /docker-entrypoint.d/*.sh
 
 EXPOSE 80
 STOPSIGNAL SIGQUIT
 WORKDIR /data
-ENTRYPOINT ["/etc/nginx/entrypoint.sh"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["nginx", "-g", "daemon off;"]
 
 # Default environment for nginx template
-ENV NGINX_WORKER_CONNECTIONS=2048 \
+ENV NGINX_ENVSUBST_FILTER="^NGINX_" \
+    NGINX_WORKER_CONNECTIONS=2048 \
     NGINX_WORKER_RLIMIT_NOFILE=262144 \
     NGINX_MULTI_ACCEPT=off \
     NGINX_ENTRYPOINT_WORKER_PROCESSES_AUTOTUNE=1 \
     NGINX_ENTRYPOINT_QUIET_LOGS=""
 
-ARG BUILD_VERSION=0.0.0
+ARG BUILD_VERSION=2.0.0
 ARG BUILD_REV
 ARG BUILD_DATE
 LABEL org.opencontainers.image.title="gecut/nginx/base" \
       org.opencontainers.image.description="Base NGINX image with a modular entrypoint system, packaged by Gecut." \
-      org.opencontainers.image.base.name="docker.io/library/nginx:1.28.2-alpine-slim" \
+      org.opencontainers.image.base.name="docker.io/library/nginx:1.30.4-alpine-slim@sha256:ddde39c6e51f02fde7410c2e9c234cf2d0a4c7bdbbe176aeb37d8ad7ab4eb58c" \
       org.opencontainers.image.version="${BUILD_VERSION}" \
       org.opencontainers.image.licenses="AGPL-3.0-only" \
       org.opencontainers.image.created=${BUILD_DATE} \

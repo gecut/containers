@@ -1,6 +1,4 @@
-add_header  Server "Gecut Web Server" always;
-add_header  X-Frame-Options SAMEORIGIN;
-add_header  X-Content-Type-Options nosniff;
-add_header  X-XSS-Protection "1; mode=block";
-add_header  X-UA-Compatible "IE=Edge,chrome=1";
-# add_header  X-Cache $upstream_cache_status always;
+add_header_inherit merge;
+add_header X-Frame-Options "SAMEORIGIN" always;
+add_header X-Content-Type-Options "nosniff" always;
+add_header Referrer-Policy "strict-origin-when-cross-origin" always;

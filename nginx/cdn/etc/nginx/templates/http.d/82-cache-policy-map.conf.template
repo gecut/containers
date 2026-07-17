@@ -3,15 +3,19 @@ map $uri $cdn_cache_profile {
   # Unversioned assets are short-cached to avoid stale content.
   default static_unversioned;
 
-  # Fingerprinted assets can be cached aggressively.
-  "~*^.+\.[0-9a-f]{6,}\.(?:avif|bmp|css|eot|gif|ico|jpe?g|js|mjs|mp3|mp4|ogg|ogv|otf|pdf|png|svg|ttf|txt|wav|webm|webp|woff2?)$" hashed;
+  # Fingerprinted assets from Webpack/CRA and Vite can be cached aggressively.
+  "~*^.+[.-][0-9a-f]{6,}(?:\.[^.]+)*\.(?:avif|bmp|css|eot|gif|ico|jpe?g|js|map|mjs|mp3|mp4|ogg|ogv|otf|pdf|png|svg|ttf|txt|wav|wasm|webm|webp|woff2?)$" hashed;
+  "~*^.+-[A-Za-z0-9_-]{8,}(?:\.[^.]+)*\.(?:avif|bmp|css|eot|gif|ico|jpe?g|js|map|mjs|mp3|mp4|ogg|ogv|otf|pdf|png|svg|ttf|txt|wav|wasm|webm|webp|woff2?)$" hashed;
+
+  # Service workers must revalidate on every deployment.
+  ~*/(?:service-worker|sw)\.js$ service_worker;
 
   # HTML shells should always revalidate.
   ~*^/(?:$|.*\/)$ html;
   ~*\.html?$ html;
 
   # JSON artifacts can be cached briefly.
-  ~*\.json$ json;
+  ~*\.(?:json|webmanifest)$ json;
 }
 
 map $cdn_cache_profile $cdn_cache_control_by_uri {
@@ -19,12 +23,19 @@ map $cdn_cache_profile $cdn_cache_control_by_uri {
   hashed "$NGINX_CDN_CACHE_HASHED, s-maxage=$NGINX_CDN_S_MAXAGE";
   html "$NGINX_CDN_CACHE_HTML, s-maxage=$NGINX_CDN_HTML_S_MAXAGE";
   json "$NGINX_CDN_CACHE_JSON";
+  service_worker "$NGINX_CDN_CACHE_SERVICE_WORKER";
 }
 
-map $status $cdn_cache_control {
+map $status $cdn_cache_control_by_status {
   ~^[45] "$NGINX_CDN_CACHE_ERROR";
   default "$cdn_cache_control_by_uri";
 }
 
+map $request_method $cdn_cache_control {
+  default "$NGINX_CDN_CACHE_ERROR";
+  GET "$cdn_cache_control_by_status";
+  HEAD "$cdn_cache_control_by_status";
+}
+
 add_header Cache-Control "$cdn_cache_control" always;
-add_header Vary "Accept-Encoding" always;
+add_header Vary "$cdn_vary" always;

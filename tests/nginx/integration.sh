@@ -1,0 +1,139 @@
+#!/bin/sh
+set -eu
+
+: "${NGINX_BASE_IMAGE:=local/nginx/base:test}"
+: "${NGINX_CORE_IMAGE:=local/nginx/core:test}"
+: "${NGINX_CDN_IMAGE:=local/nginx/cdn:test}"
+: "${NGINX_SPA_IMAGE:=local/nginx/spa:test}"
+
+WORK=$(mktemp -d)
+containers=""
+
+cleanup() {
+  for container in $containers; do
+    docker rm -f "$container" >/dev/null 2>&1 || true
+  done
+  rm -rf "$WORK"
+}
+trap cleanup EXIT HUP INT TERM
+
+fail() {
+  echo >&2 "integration.sh: $1"
+  exit 1
+}
+
+start() {
+  name=$1
+  image=$2
+  shift 2
+  docker run -d --name "$name" -p 127.0.0.1::80 "$@" "$image" >/dev/null
+  containers="$containers $name"
+  port=$(docker port "$name" 80/tcp | sed -n '1s/.*://p')
+  i=0
+  until curl -fsS "http://127.0.0.1:$port/server-info" >/dev/null; do
+    i=$((i + 1))
+    [ "$i" -lt 30 ] || { docker logs "$name" >&2; fail "$name did not become ready"; }
+    sleep 1
+  done
+  printf '%s' "$port"
+}
+
+assert_status() {
+  expected=$1
+  url=$2
+  actual=$(curl -sS -o /dev/null -w '%{http_code}' "$url")
+  [ "$actual" = "$expected" ] || fail "$url returned $actual, expected $expected"
+}
+
+assert_header() {
+  url=$1
+  name=$2
+  pattern=$3
+  curl -sSI "$url" | grep -Eiq "^${name}:.*${pattern}" || fail "$url is missing $name matching $pattern"
+}
+
+docker run --rm "$NGINX_BASE_IMAGE" nginx -t >/dev/null
+docker run --rm -e NGINX_ENTRYPOINT_WORKER_PROCESSES_AUTOTUNE=off "$NGINX_BASE_IMAGE" nginx -t >/dev/null 2>&1 && fail 'invalid worker autotune value was accepted'
+
+core_config=$(docker run --rm "$NGINX_CORE_IMAGE" nginx -T 2>&1)
+printf '%s' "$core_config" | grep -q 'set_real_ip_from' && fail 'Real IP rewriting is enabled by default'
+printf '%s' "$core_config" | grep -Eq '^resolver ' && fail 'Resolver is enabled by default'
+docker run --rm -e NGINX_RESOLVERS=local "$NGINX_CORE_IMAGE" nginx -T 2>&1 | grep -Eq '^resolver '
+docker run --rm -e NGINX_TRUSTED_PROXY_CIDRS=10.0.0.0/8 "$NGINX_CORE_IMAGE" nginx -T 2>&1 | grep -q 'set_real_ip_from 10.0.0.0/8'
+docker run --rm -e NGINX_TRUSTED_PROXY_CIDRS=10.0.0.1 "$NGINX_CORE_IMAGE" nginx -t >/dev/null 2>&1 && fail 'Non-CIDR trusted proxy was accepted'
+
+mkdir -p "$WORK/core/.well-known"
+printf '%s\n' '<h1>core</h1>' > "$WORK/core/index.html"
+printf '%s\n' 'association' > "$WORK/core/.well-known/assetlinks.json"
+core_port=$(start nginx-core-test "$NGINX_CORE_IMAGE" -v "$WORK/core:/data:ro")
+assert_status 200 "http://127.0.0.1:$core_port/"
+assert_status 200 "http://127.0.0.1:$core_port/.well-known/assetlinks.json"
+assert_status 403 "http://127.0.0.1:$core_port/.env"
+core_post_status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$core_port/")
+[ "$core_post_status" = 403 ] || fail "Core POST returned $core_post_status, expected 403"
+assert_header "http://127.0.0.1:$core_port/" X-Content-Type-Options nosniff
+
+robots_port=$(start nginx-core-robots-test "$NGINX_CORE_IMAGE" -e NGINX_DISALLOW_ROBOTS=on)
+curl -fsS "http://127.0.0.1:$robots_port/robots.txt" | grep -q 'Disallow: /' || fail 'Robots disallow toggle did not replace the bundled default'
+
+printf '%s\n' 'jpeg' > "$WORK/core/photo.jpg"
+printf '%s\n' 'webp' > "$WORK/core/photo.jpg.webp"
+features_port=$(start nginx-core-features-test "$NGINX_CORE_IMAGE" \
+  -e NGINX_CORS_ENABLE=on -e NGINX_AUTO_WEBP=on -e NGINX_FORCE_DOMAIN=example.test \
+  -v "$WORK/core:/data:ro")
+redirect_headers=$(curl -sSI -H 'Host: wrong.test' "http://127.0.0.1:$features_port/path")
+printf '%s' "$redirect_headers" | grep -q '308' || fail 'Canonical host did not return 308'
+printf '%s' "$redirect_headers" | grep -Eiq '^Location: https://example\.test/path' || fail 'Canonical redirect did not preserve HTTPS'
+options_headers=$(curl -sSI -X OPTIONS -H 'Host: example.test' "http://127.0.0.1:$features_port/")
+printf '%s' "$options_headers" | grep -q '204' || fail 'CORS preflight did not return 204'
+printf '%s' "$options_headers" | grep -Eiq '^Access-Control-Allow-Origin: \*' || fail 'CORS origin header is missing'
+printf '%s' "$options_headers" | grep -Eiq '^X-Content-Type-Options: nosniff' || fail 'Security headers were lost in CORS response'
+curl -fsS -H 'Host: example.test' -H 'Accept: image/webp' "http://127.0.0.1:$features_port/photo.jpg" | grep -q webp || fail 'WebP negotiation did not serve the alternate file'
+curl -sSI -H 'Host: example.test' -H 'Accept: image/webp' "http://127.0.0.1:$features_port/photo.jpg" | grep -Eiq '^Vary:.*Accept' || fail 'WebP response is missing Vary: Accept'
+
+mkdir -p "$WORK/cdn"
+printf '%s\n' '<h1>cdn</h1>' > "$WORK/cdn/index.html"
+printf '%s\n' 'vite' > "$WORK/cdn/app-C6uTJdX2.js"
+printf '%s\n' 'cra' > "$WORK/cdn/main.abc12345.chunk.js"
+printf '%s\n' 'worker' > "$WORK/cdn/service-worker.js"
+printf '%s\n' '{}' > "$WORK/cdn/manifest.webmanifest"
+cdn_port=$(start nginx-cdn-test "$NGINX_CDN_IMAGE" -v "$WORK/cdn:/data:ro")
+assert_header "http://127.0.0.1:$cdn_port/app-C6uTJdX2.js" Cache-Control immutable
+assert_header "http://127.0.0.1:$cdn_port/main.abc12345.chunk.js" Cache-Control immutable
+assert_header "http://127.0.0.1:$cdn_port/service-worker.js" Cache-Control no-cache
+assert_header "http://127.0.0.1:$cdn_port/manifest.webmanifest" Cache-Control max-age=60
+assert_header "http://127.0.0.1:$cdn_port/" Cache-Control must-revalidate
+etag=$(curl -sSI "http://127.0.0.1:$cdn_port/app-C6uTJdX2.js" | awk 'BEGIN { IGNORECASE=1 } /^ETag:/ { sub(/\r$/, "", $2); print $2; exit }')
+[ -n "$etag" ] || fail 'CDN response is missing ETag'
+etag_status=$(curl -sS -o /dev/null -w '%{http_code}' -H "If-None-Match: $etag" "http://127.0.0.1:$cdn_port/app-C6uTJdX2.js")
+[ "$etag_status" = 304 ] || fail "Conditional ETag request returned $etag_status"
+header_count=$(curl -sSI "http://127.0.0.1:$cdn_port/app-C6uTJdX2.js" | grep -ic '^Cache-Control:')
+[ "$header_count" -eq 1 ] || fail "CDN returned $header_count Cache-Control headers"
+vary_count=$(curl -sSI "http://127.0.0.1:$cdn_port/app-C6uTJdX2.js" | grep -ic '^Vary:')
+[ "$vary_count" -eq 1 ] || fail "CDN returned $vary_count Vary headers"
+assert_status 404 "http://127.0.0.1:$cdn_port/missing.js"
+assert_header "http://127.0.0.1:$cdn_port/missing.js" Cache-Control no-store
+assert_header "http://127.0.0.1:$cdn_port/missing.js" X-Content-Type-Options nosniff
+
+mkdir -p "$WORK/spa/assets"
+printf '%s\n' 'SPA-SHELL' > "$WORK/spa/index.html"
+printf '%s\n' 'asset' > "$WORK/spa/assets/app.abcdef12.js"
+printf '%s\n' 'worker' > "$WORK/spa/sw.js"
+spa_port=$(start nginx-spa-test "$NGINX_SPA_IMAGE" -v "$WORK/spa:/data:ro")
+curl -fsS "http://127.0.0.1:$spa_port/users/42?tab=profile" | grep -q SPA-SHELL || fail 'SPA deep route did not return the shell'
+assert_status 200 "http://127.0.0.1:$spa_port/assets/app.abcdef12.js"
+assert_status 404 "http://127.0.0.1:$spa_port/assets/missing.js"
+assert_status 404 "http://127.0.0.1:$spa_port/unknown.route"
+assert_header "http://127.0.0.1:$spa_port/assets/missing.js" Cache-Control no-store
+assert_header "http://127.0.0.1:$spa_port/users/42" Cache-Control must-revalidate
+assert_header "http://127.0.0.1:$spa_port/users/42" X-Content-Type-Options nosniff
+post_status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$spa_port/users/42")
+[ "$post_status" = 403 ] || fail "SPA POST returned $post_status, expected 403"
+
+mkdir -p "$WORK/empty"
+docker run --rm -v "$WORK/empty:/data:ro" "$NGINX_SPA_IMAGE" nginx -t >/dev/null 2>&1 && fail 'SPA started without a shell'
+
+docker kill --signal=QUIT nginx-spa-test >/dev/null
+containers=$(printf '%s' "$containers" | sed 's/nginx-spa-test//')
+
+echo 'NGINX integration checks passed'

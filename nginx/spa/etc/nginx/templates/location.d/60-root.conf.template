@@ -1,0 +1,9 @@
+location / {
+  include /etc/nginx/conf.d/location.d/root.d/*.conf;
+  try_files $uri $uri/ =404;
+}
+
+location ~ ^/[^.]*$ {
+  include /etc/nginx/conf.d/location.d/root.d/*.conf;
+  try_files $uri $uri/ $NGINX_SPA_INDEX_URI;
+}

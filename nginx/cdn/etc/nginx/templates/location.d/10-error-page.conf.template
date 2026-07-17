@@ -4,5 +4,4 @@ location = /_error.html {
   root /default-data;
   internal;
   auth_basic off;
-  add_header Cache-Control "no-store" always;
 }

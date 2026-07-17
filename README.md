@@ -8,6 +8,7 @@ Container images and base runtimes for the Gecut stack.
 - [NGINX Base](./nginx/base/README.md)
 - [NGINX Core](./nginx/core/README.md)
 - [NGINX CDN](./nginx/cdn/README.md)
+- [NGINX SPA](./nginx/spa/README.md)
 
 ## Next.js Stack
 

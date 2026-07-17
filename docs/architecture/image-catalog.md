@@ -10,13 +10,14 @@ A feature belongs to the lowest layer that owns it. Downstream images inherit pa
 
 ## Active canonical images
 
-Exactly six GHCR packages are active. Every active image starts independent SemVer at `1.0.0`, supports `linux/amd64` and `linux/arm64`, publishes only to GHCR, and uses the compatibility and tag policy in this document.
+Exactly seven GHCR packages are active. Every active image starts independent SemVer at `1.0.0`, supports `linux/amd64` and `linux/arm64`, publishes only to GHCR, and uses the compatibility and tag policy in this document. The NGINX base/core/CDN contract has a major v2 release line; SPA starts at v1.
 
 | ID | Canonical GHCR path | Source context | Parent | Role | Ownership boundary |
 | --- | --- | --- | --- | --- | --- |
 | `nginx-base` | `ghcr.io/gecut/nginx/base` | `nginx/base` | none | NGINX runtime and template-engine foundation | Entrypoint orchestration, environment-template rendering, NGINX process defaults, and base runtime cleanup only. |
 | `nginx-core` | `ghcr.io/gecut/nginx/core` | `nginx/core` | `nginx-base` | NGINX static-origin profile | Static serving defaults, security locations, real-IP handling, gzip, optional CORS, WebP, force-domain, rate-limit, healthcheck, and default data behavior inherited by CDN. |
 | `nginx-cdn` | `ghcr.io/gecut/nginx/cdn` | `nginx/cdn` | `nginx-core` | CDN-focused NGINX cache-policy specialization | CDN cache headers, cache-policy maps, ETag behavior, CDN-oriented static defaults, and downstream CDN-origin tuning only. |
+| `nginx-spa` | `ghcr.io/gecut/nginx/spa` | `nginx/spa` | `nginx-cdn` | Strict static SPA hosting | SPA shell readiness, extensionless route fallback, and real 404 behavior for missing static assets. |
 | `nextjs-base` | `ghcr.io/gecut/nextjs/base` | `nextjs/base` | none | Next.js runtime foundation | Non-root Next.js runtime setup, shared startup scripts, permission repair, public asset copy, revalidation hook, tini entrypoint, and base Node runtime behavior. |
 | `nextjs-prisma` | `ghcr.io/gecut/nextjs/prisma` | `nextjs/with-prisma` | `nextjs-base` | Next.js runtime with Prisma application-start hook | Prisma-specific startup detection and command hook only; shared Next.js runtime behavior belongs to `nextjs-base`. |
 | `nextjs-payload` | `ghcr.io/gecut/nextjs/payload` | `nextjs/with-payload` | `nextjs-base` | Next.js runtime with Payload application-start hook | Payload-specific startup detection and command hook only; shared Next.js runtime behavior belongs to `nextjs-base`. |
@@ -24,7 +25,7 @@ Exactly six GHCR packages are active. Every active image starts independent SemV
 ### Inheritance model
 
 ```text
-NGINX:  nginx-base -> nginx-core -> nginx-cdn
+NGINX:  nginx-base -> nginx-core -> nginx-cdn -> nginx-spa
 Next.js: nextjs-base -> nextjs-prisma
          nextjs-base -> nextjs-payload
 ```
@@ -69,9 +70,9 @@ Every non-canonical item discovered from repository directories, Dockerfiles, wo
 | `ghcr.io/gecut/nextjs` | `frozen` | Workflow matrix names `nextjs` for `nextjs/base`; Prisma README references legacy `gecut/nextjs` Docker Hub package. | Remains pullable at existing state and must not be repointed. |
 | `ghcr.io/gecut/nextjs/with-prisma` | `archived-pullable` | Prisma README documents `ghcr.io/gecut/nextjs/with-prisma`; Prisma Dockerfile labels `gecut/nextjs/with-prisma`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
 | `ghcr.io/gecut/nextjs/with-payload` | `archived-pullable` | Payload README documents `ghcr.io/gecut/nextjs/with-payload`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
-| `docker.io/mm25zamanian/nginx/base` | `archived-pullable` | Workflow metadata includes disabled Docker Hub target `docker.io/mm25zamanian/${matrix.name}`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
-| `docker.io/mm25zamanian/nginx/core` | `archived-pullable` | Workflow metadata includes disabled Docker Hub target `docker.io/mm25zamanian/${matrix.name}`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
-| `docker.io/mm25zamanian/nginx/cdn` | `archived-pullable` | Workflow metadata includes disabled Docker Hub target `docker.io/mm25zamanian/${matrix.name}`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
+| `docker.io/mm25zamanian/nginx/base` | `archived-pullable` | The pre-v2 workflow contained this disabled Docker Hub target. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
+| `docker.io/mm25zamanian/nginx/core` | `archived-pullable` | The pre-v2 workflow contained this disabled Docker Hub target. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
+| `docker.io/mm25zamanian/nginx/cdn` | `archived-pullable` | The pre-v2 workflow contained this disabled Docker Hub target. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
 | `docker.io/mm25zamanian/nextjs` | `frozen` | Workflow metadata includes disabled Docker Hub target `docker.io/mm25zamanian/${matrix.name}`. | Remains frozen and must not be repointed. |
 | `docker.io/mm25zamanian/nexload` | `archived-pullable` | Workflow metadata includes disabled Docker Hub target `docker.io/mm25zamanian/${matrix.name}`. | Pullable if present, with no new releases, maintenance, or vulnerability fixes. |
 | `docker.io/gecut/nextjs` | `frozen` | Prisma README has Docker Hub badge/link for `gecut/nextjs`. | Remains frozen and must not be repointed. |
@@ -82,7 +83,7 @@ Read-only GHCR package inventory could not be completed from this environment. T
 
 ## Active responsibilities
 
-Active platform responsibilities are limited to the ownership boundaries in the active catalog. In particular, the active NGINX stack covers base templating, static-origin behavior, and CDN-origin cache header policy. The active Next.js stack covers base runtime behavior plus Prisma-specific or Payload-specific application-start hooks in the corresponding child images.
+Active platform responsibilities are limited to the ownership boundaries in the active catalog. In particular, the active NGINX stack covers base templating, static-origin behavior, CDN-origin cache header policy, and strict static SPA routing. The active Next.js stack covers base runtime behavior plus Prisma-specific or Payload-specific application-start hooks in the corresponding child images.
 
 ## Out of scope for the current platform contract
 

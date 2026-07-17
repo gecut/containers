@@ -1,4 +1,4 @@
-# Use if_not_owner to serve the content of symbolic links based on the last modified time of the original file.
+# Symlink policy is explicit; the default is off for bind-mount compatibility.
 disable_symlinks $NGINX_DISABLE_SYMLINKS;
 
 location ~* (?:\.(?:bak|conf|dist|fla|in[ci]|log|psd|sh|sql|sw[op]|lock)|~)$ {
@@ -20,12 +20,14 @@ location ~* \.(engine|inc|info|install|make|module|profile|test|po|sh|.*sql|them
 
 location = /robots.txt {
   access_log off; log_not_found off;
-  expires epoch;
 }
 
 location = /favicon.ico {
   access_log off; log_not_found off;
-  expires epoch;
+}
+
+location ^~ /.well-known/ {
+  try_files $uri =404;
 }
 
 location ~ /\. {

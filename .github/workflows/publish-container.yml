@@ -1,163 +1,290 @@
 # yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
 
-name: Build & Publish Containers
+name: Build, Test & Publish Containers
 
-# Defines the events that trigger this workflow.
 on:
-  # Allows manual execution from the GitHub UI.
   workflow_dispatch:
-
-  # Triggers on pushes to the main branch.
   push:
-    branches:
-      - main
-
-  # Triggers on pull requests targeting the main branch.
+    branches: [main]
   pull_request:
-
-  # Triggers when a new release is created.
   release:
-    types:
-      - created
+    types: [created]
 
-# Environment variables available to all jobs in the workflow.
 env:
-  # Using github.repository_owner makes the workflow reusable and not hardcoded.
+  REGISTRY: ghcr.io
   REGISTRY_USER: ${{ github.repository_owner }}
+  NGINX_BASE_VERSION: 2.0.0
+  NGINX_CORE_VERSION: 2.0.0
+  NGINX_CDN_VERSION: 2.0.0
+  NGINX_SPA_VERSION: 1.0.0
 
 jobs:
-  build-and-publish:
-    name: Build & Publish Matrix
+  changes:
     runs-on: ubuntu-latest
+    outputs:
+      nginx: ${{ steps.filter.outputs.nginx || steps.all.outputs.nginx }}
+      nextjs: ${{ steps.filter.outputs.nextjs || steps.all.outputs.nextjs }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - id: filter
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            nginx:
+              - 'nginx/**'
+              - 'tests/nginx/**'
+              - 'catalog/images.yaml'
+              - 'docs/architecture/image-catalog.md'
+              - '.github/workflows/publish-container.yml'
+            nextjs:
+              - 'nextjs/**'
+              - '.github/workflows/publish-container.yml'
+      - id: all
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo 'nginx=true' >> "$GITHUB_OUTPUT"
+          echo 'nextjs=true' >> "$GITHUB_OUTPUT"
 
+  nginx-test:
+    needs: changes
+    if: needs.changes.outputs.nginx == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Install shell validation tools
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Static checks
+        run: |
+          tests/nginx/static.sh
+          ruby tests/nginx/catalog.rb
+          find nginx tests/nginx -type f -name '*.sh' -print0 | xargs -0 shellcheck
+          ruby -e 'require "yaml"; YAML.safe_load(File.read("catalog/images.yaml"), [], [], true); YAML.safe_load(File.read(".github/workflows/publish-container.yml"), [], [], true)'
+
+      - name: Lint Dockerfiles
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          recursive: true
+          dockerfile: nginx
+
+      - name: Build dependency closure locally
+        env:
+          BUILD_DATE: ${{ github.event.repository.updated_at }}
+          BUILD_REV: ${{ github.sha }}
+        run: |
+          docker build -t local/nginx/base:test \
+            --build-arg BUILD_VERSION="$NGINX_BASE_VERSION" --build-arg BUILD_DATE="$BUILD_DATE" --build-arg BUILD_REV="$BUILD_REV" nginx/base
+          docker build -t local/nginx/core:test \
+            --build-arg NGINX_BASE_IMAGE=local/nginx/base:test \
+            --build-arg BUILD_VERSION="$NGINX_CORE_VERSION" --build-arg BUILD_DATE="$BUILD_DATE" --build-arg BUILD_REV="$BUILD_REV" nginx/core
+          docker build -t local/nginx/cdn:test \
+            --build-arg NGINX_CORE_IMAGE=local/nginx/core:test \
+            --build-arg BUILD_VERSION="$NGINX_CDN_VERSION" --build-arg BUILD_DATE="$BUILD_DATE" --build-arg BUILD_REV="$BUILD_REV" nginx/cdn
+          docker build -t local/nginx/spa:test \
+            --build-arg NGINX_CDN_IMAGE=local/nginx/cdn:test \
+            --build-arg BUILD_VERSION="$NGINX_SPA_VERSION" --build-arg BUILD_DATE="$BUILD_DATE" --build-arg BUILD_REV="$BUILD_REV" nginx/spa
+
+      - name: Runtime integration tests
+        run: tests/nginx/integration.sh
+
+      - name: Verify OCI version labels
+        run: |
+          test "$(docker image inspect local/nginx/base:test --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$NGINX_BASE_VERSION"
+          test "$(docker image inspect local/nginx/core:test --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$NGINX_CORE_VERSION"
+          test "$(docker image inspect local/nginx/cdn:test --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$NGINX_CDN_VERSION"
+          test "$(docker image inspect local/nginx/spa:test --format '{{ index .Config.Labels "org.opencontainers.image.version" }}')" = "$NGINX_SPA_VERSION"
+
+  nginx-publish:
+    needs: [changes, nginx-test]
+    if: github.event_name != 'pull_request' && (needs.changes.outputs.nginx == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.8.1
+
+      - name: Build and push temporary multi-platform closure
+        env:
+          BUILD_DATE: ${{ github.event.repository.updated_at }}
+          BUILD_REV: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          suffix="candidate-${GITHUB_SHA::12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          base="$REGISTRY/$REGISTRY_USER/nginx/base:$suffix"
+          core="$REGISTRY/$REGISTRY_USER/nginx/core:$suffix"
+          cdn="$REGISTRY/$REGISTRY_USER/nginx/cdn:$suffix"
+          spa="$REGISTRY/$REGISTRY_USER/nginx/spa:$suffix"
+
+          docker buildx build --platform linux/amd64,linux/arm64 --push --sbom=true --provenance=mode=max -t "$base" \
+            --build-arg BUILD_VERSION="$NGINX_BASE_VERSION" --build-arg BUILD_DATE="$BUILD_DATE" --build-arg BUILD_REV="$BUILD_REV" nginx/base
+          docker buildx build --platform linux/amd64,linux/arm64 --push --sbom=true --provenance=mode=max -t "$core" \
+            --build-arg NGINX_BASE_IMAGE="$base" \
+            --build-arg BUILD_VERSION="$NGINX_CORE_VERSION" --build-arg BUILD_DATE="$BUILD_DATE" --build-arg BUILD_REV="$BUILD_REV" nginx/core
+          docker buildx build --platform linux/amd64,linux/arm64 --push --sbom=true --provenance=mode=max -t "$cdn" \
+            --build-arg NGINX_CORE_IMAGE="$core" \
+            --build-arg BUILD_VERSION="$NGINX_CDN_VERSION" --build-arg BUILD_DATE="$BUILD_DATE" --build-arg BUILD_REV="$BUILD_REV" nginx/cdn
+          docker buildx build --platform linux/amd64,linux/arm64 --push --sbom=true --provenance=mode=max -t "$spa" \
+            --build-arg NGINX_CDN_IMAGE="$cdn" \
+            --build-arg BUILD_VERSION="$NGINX_SPA_VERSION" --build-arg BUILD_DATE="$BUILD_DATE" --build-arg BUILD_REV="$BUILD_REV" nginx/spa
+
+          printf 'BASE_TEMP=%s\nCORE_TEMP=%s\nCDN_TEMP=%s\nSPA_TEMP=%s\n' "$base" "$core" "$cdn" "$spa" >> "$GITHUB_ENV"
+          for pair in "BASE:$base" "CORE:$core" "CDN:$cdn" "SPA:$spa"; do
+            name=${pair%%:*}
+            image=${pair#*:}
+            digest=$(docker buildx imagetools inspect "$image" | awk '/^Digest:/ { print $2; exit }')
+            printf '%s_DIGEST_REF=%s@%s\n' "$name" "${image%:*}" "$digest" >> "$GITHUB_ENV"
+          done
+
+      - name: Test published native manifests
+        run: |
+          NGINX_BASE_IMAGE="$BASE_DIGEST_REF" \
+          NGINX_CORE_IMAGE="$CORE_DIGEST_REF" \
+          NGINX_CDN_IMAGE="$CDN_DIGEST_REF" \
+          NGINX_SPA_IMAGE="$SPA_DIGEST_REF" \
+            tests/nginx/integration.sh
+
+      - name: Scan temporary images
+        run: |
+          set -euo pipefail
+          for image in "$BASE_DIGEST_REF" "$CORE_DIGEST_REF" "$CDN_DIGEST_REF" "$SPA_DIGEST_REF"; do
+            docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.67.2 image \
+              --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL "$image"
+          done
+
+      - name: Sign immutable digests
+        run: |
+          set -euo pipefail
+          for image in "$BASE_DIGEST_REF" "$CORE_DIGEST_REF" "$CDN_DIGEST_REF" "$SPA_DIGEST_REF"; do
+            cosign sign --yes "$image"
+          done
+
+      - name: Preflight immutable tags
+        run: |
+          set -euo pipefail
+          sha_tag="sha-${GITHUB_SHA::12}"
+          references="
+          $REGISTRY/$REGISTRY_USER/nginx/base:$sha_tag
+          $REGISTRY/$REGISTRY_USER/nginx/core:$sha_tag
+          $REGISTRY/$REGISTRY_USER/nginx/cdn:$sha_tag
+          $REGISTRY/$REGISTRY_USER/nginx/spa:$sha_tag"
+          if [ "$GITHUB_EVENT_NAME" = release ]; then
+            references="$references
+            $REGISTRY/$REGISTRY_USER/nginx/base:$NGINX_BASE_VERSION
+            $REGISTRY/$REGISTRY_USER/nginx/core:$NGINX_CORE_VERSION
+            $REGISTRY/$REGISTRY_USER/nginx/cdn:$NGINX_CDN_VERSION
+            $REGISTRY/$REGISTRY_USER/nginx/spa:$NGINX_SPA_VERSION"
+          fi
+          for reference in $references; do
+            if docker buildx imagetools inspect "$reference" >/dev/null 2>&1; then
+              echo >&2 "$reference already exists; immutable tags are never overwritten"
+              exit 1
+            fi
+          done
+
+      - name: Promote SHA and moving aliases
+        run: |
+          set -euo pipefail
+          sha_tag="sha-${GITHUB_SHA::12}"
+          docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/base:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/base:latest" "$BASE_TEMP"
+          docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/core:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/core:latest" "$CORE_TEMP"
+          docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/cdn:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/cdn:latest" "$CDN_TEMP"
+          docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/spa:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/spa:latest" "$SPA_TEMP"
+
+      - name: Promote immutable release versions
+        if: github.event_name == 'release'
+        run: |
+          set -euo pipefail
+          promote_release() {
+            source=$1
+            repository=$2
+            version=$3
+            major=${version%%.*}
+            remainder=${version#*.}
+            minor=${remainder%%.*}
+            if docker buildx imagetools inspect "$repository:$version" >/dev/null 2>&1; then
+              echo >&2 "$repository:$version already exists; immutable tags are never overwritten"
+              exit 1
+            fi
+            docker buildx imagetools create -t "$repository:$version" -t "$repository:$major.$minor" -t "$repository:$major" "$source"
+          }
+          promote_release "$BASE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/base" "$NGINX_BASE_VERSION"
+          promote_release "$CORE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/core" "$NGINX_CORE_VERSION"
+          promote_release "$CDN_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/cdn" "$NGINX_CDN_VERSION"
+          promote_release "$SPA_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/spa" "$NGINX_SPA_VERSION"
+
+  nextjs-publish:
+    needs: changes
+    if: needs.changes.outputs.nextjs == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
     strategy:
-      # Ensures that if one matrix job fails, others will continue to run.
-      # This is useful for seeing all potential failures at once.
       fail-fast: false
       max-parallel: 1
       matrix:
         include:
-          - name: nginx/base
-            path: nginx/base
-          - name: nginx/core
-            path: nginx/core
-          - name: nginx/cdn
-            path: nginx/cdn
           - name: nextjs
             path: nextjs/base
           - name: nextjs
             path: nextjs/with-prisma
           - name: nexload
             path: nextjs/with-payload
-
     permissions:
       contents: read
       packages: write
       id-token: write
-
     steps:
-      - name: ⤵️ Checkout Repository
-        uses: actions/checkout@v4.2.2
-
-      - name: ❔ Check for Relevant File Changes
-        id: changes
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            container_folder:
-              - ./${{ matrix.path }}/**
-
-      - name: ⚙️ Determine if Build is Required
-        id: build_decision
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" || "${{ github.event_name }}" == "release" || "${{ steps.changes.outputs.container_folder }}" == "true" ]]; then
-            echo "should_build=true" >> $GITHUB_OUTPUT
-          else
-            echo "should_build=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: 🏗 Extract version from dockerfile
-        if: ${{ steps.build_decision.outputs.should_build == 'true' }}
-        id: version
-        run: |
-          version=$(grep 'ARG BUILD_VERSION' ./${{ matrix.path }}/Dockerfile | cut -d'=' -f2)
-          echo "version=$version" >> $GITHUB_OUTPUT
-          echo "version: $version"
-
-      - name: 🏗 Install cosign
-        if: ${{ github.event_name != 'pull_request' && steps.build_decision.outputs.should_build == 'true' }}
-        uses: sigstore/cosign-installer@v3.8.1
-
-      - name: 🏗 Setup Docker Buildx
-        if: steps.build_decision.outputs.should_build == 'true'
-        uses: docker/setup-buildx-action@v3
-
-      - name: 🏗 Cache Docker Layers
-        if: steps.build_decision.outputs.should_build == 'true'
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache
-          key: buildx-${{ runner.os }}-${{ matrix.path }}-${{ github.sha }}
-          restore-keys: |
-            buildx-${{ runner.os }}-${{ matrix.path }}-
-
-      - name: 🔐 Log into docker.io Registry
-        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          username: mm25zamanian
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
-
-      - name: 🔐 Log into ghcr.io Registry
-        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
+      - uses: actions/checkout@v4.2.2
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ env.REGISTRY_USER }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract Container Metadata
-        id: meta
-        if: steps.build_decision.outputs.should_build == 'true'
+      - id: version
+        run: |
+          version=$(grep 'ARG BUILD_VERSION' "${{ matrix.path }}/Dockerfile" | cut -d= -f2)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: |
-            ghcr.io/${{env.REGISTRY_USER}}/${{matrix.name}},enable=true
-            docker.io/mm25zamanian/${{matrix.name}},enable=false
+          images: ghcr.io/${{ env.REGISTRY_USER }}/${{ matrix.name }}
           tags: |
             type=ref,event=branch
-            type=raw,value=${{steps.version.outputs.version}}
+            type=raw,value=${{ steps.version.outputs.version }}
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=,suffix=,format=short
-
-      - name: 🚀 Build and Push Container Image
-        id: build-and-push
-        if: steps.build_decision.outputs.should_build == 'true'
+            type=sha,prefix=,format=short
+      - id: build-nextjs
         uses: docker/build-push-action@v6
         with:
-          context: ./${{ matrix.path }}
+          context: ${{ matrix.path }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
           build-args: |
             BUILD_DATE=${{ github.event.repository.updated_at }}
             BUILD_REV=${{ github.sha }}
-
-      # Step 11: Install Cosign for signing the images.
-      - name: 🖋 Install Cosign
-        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@v3
-
-      # Step 12: Sign the pushed container images using Cosign's keyless signing.
-      # We loop through each base image name from the metadata step and sign the immutable digest
-      # produced by the build-and-push step. This is more secure than signing mutable tags.
-      - name: 🖋 Sign Container Images
-        if: steps.build_decision.outputs.should_build == 'true' && github.event_name != 'pull_request'
-        run: |
-          for image in ${{ steps.meta.outputs.images }}; do
-            echo "Signing ${image}@${{ steps.build-and-push.outputs.digest }}"
-            cosign sign --yes "${image}@${{ steps.build-and-push.outputs.digest }}"
-          done
+      - name: Install Cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3.8.1
+      - name: Sign Next.js image digest
+        if: github.event_name != 'pull_request'
+        run: cosign sign --yes "ghcr.io/${{ env.REGISTRY_USER }}/${{ matrix.name }}@${{ steps.build-nextjs.outputs.digest }}"

@@ -1,0 +1,3 @@
+location ~* \.(?:avif|bmp|css|eot|gif|html?|ico|jpe?g|js|json|map|mjs|mp3|mp4|ogg|ogv|otf|pdf|png|svg|ttf|txt|wasm|wav|webm|webmanifest|webp|woff2?|xml)$ {
+  try_files $uri =404;
+}

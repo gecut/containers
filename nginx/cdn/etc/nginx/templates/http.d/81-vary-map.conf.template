@@ -1,0 +1,4 @@
+map $uri $cdn_vary {
+  default "Accept-Encoding";
+  ~*\.(?:png|jpe?g)$ "Accept, Accept-Encoding";
+}

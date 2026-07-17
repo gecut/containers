@@ -1,0 +1,3 @@
+location = $NGINX_SPA_INDEX_URI {
+  try_files $uri =404;
+}
