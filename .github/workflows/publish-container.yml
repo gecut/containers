@@ -156,7 +156,11 @@ jobs:
           for pair in "BASE:$base" "CORE:$core" "CDN:$cdn" "SPA:$spa"; do
             name=${pair%%:*}
             image=${pair#*:}
-            digest=$(docker buildx imagetools inspect "$image" | awk '/^Digest:/ { print $2; exit }')
+            if ! digest=$(docker buildx imagetools inspect "$image" | awk '$1 == "Digest:" && digest == "" { digest=$2 } END { if (digest == "") exit 1; print digest }'); then
+              echo >&2 "Could not resolve the pushed digest for $image"
+              exit 1
+            fi
+            echo "Resolved $image to $digest"
             printf '%s_DIGEST_REF=%s@%s\n' "$name" "${image%:*}" "$digest" >> "$GITHUB_ENV"
           done
 
@@ -248,7 +252,10 @@ jobs:
             expected_ref=$1
             promoted_ref=$2
             expected=${expected_ref##*@}
-            actual=$(docker buildx imagetools inspect "$promoted_ref" | awk '/^Digest:/ { print $2; exit }')
+            if ! actual=$(docker buildx imagetools inspect "$promoted_ref" | awk '$1 == "Digest:" && digest == "" { digest=$2 } END { if (digest == "") exit 1; print digest }'); then
+              echo >&2 "Could not resolve the promoted digest for $promoted_ref"
+              exit 1
+            fi
             if [ "$actual" != "$expected" ]; then
               echo >&2 "$promoted_ref resolved to $actual, expected signed digest $expected"
               exit 1

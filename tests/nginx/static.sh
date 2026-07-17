@@ -37,4 +37,9 @@ if grep -Eq '^[[:space:]]*(-[[:space:]]+)?uses:[[:space:]]+[^#[:space:]]+@v' "$R
   exit 1
 fi
 
+if grep -Fq "print \$2; exit" "$ROOT/.github/workflows/publish-container.yml"; then
+  echo >&2 'Digest extraction must consume the complete Buildx output under pipefail'
+  exit 1
+fi
+
 echo 'Static NGINX checks passed'
