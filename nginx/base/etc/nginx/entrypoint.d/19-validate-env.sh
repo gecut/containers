@@ -45,6 +45,7 @@ for name in NGINX_MULTI_ACCEPT NGINX_AUTOINDEX NGINX_CORS_ENABLE NGINX_AUTO_WEBP
 done
 
 validate_enum NGINX_ENTRYPOINT_WORKER_PROCESSES_AUTOTUNE "1"
+validate_enum NGINX_ENTRYPOINT_LOCAL_RESOLVERS "1"
 validate_enum NGINX_ERROR_LOG_LEVEL "debug info notice warn error crit alert emerg"
 validate_enum NGINX_LIMIT_REQ_LOG "info notice warn error"
 validate_enum NGINX_CANONICAL_SCHEME "http https"

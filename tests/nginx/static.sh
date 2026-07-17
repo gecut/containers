@@ -10,6 +10,7 @@ done
 grep -q 'nginx:1.30.4-alpine-slim@sha256:ddde39c6' "$ROOT/nginx/base/Dockerfile"
 grep -q 'ARG BUILD_VERSION=2.0.0' "$ROOT/nginx/base/Dockerfile"
 grep -q 'ARG BUILD_VERSION=2.0.0' "$ROOT/nginx/core/Dockerfile"
+grep -q 'NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1' "$ROOT/nginx/core/Dockerfile"
 grep -q 'ARG BUILD_VERSION=2.0.0' "$ROOT/nginx/cdn/Dockerfile"
 grep -q 'ARG BUILD_VERSION=1.0.0' "$ROOT/nginx/spa/Dockerfile"
 grep -q 'parent: nginx-cdn' "$ROOT/catalog/images.yaml"
