@@ -28,6 +28,11 @@ grep -q "minor_tag=\${version%.*}" "$ROOT/.github/workflows/publish-container.ym
 grep -q -- "-t \"\$repository:\$patch_tag\"" "$ROOT/.github/workflows/publish-container.yml"
 grep -q -- "-t \"\$repository:\$minor_tag\"" "$ROOT/.github/workflows/publish-container.yml"
 grep -q -- "-t \"\$repository:\$major_tag\"" "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'allow_version_overwrite:' "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'type: boolean' "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'ALLOW_VERSION_OVERWRITE:' "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'SHA tags remain immutable' "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'already points to the candidate digest' "$ROOT/.github/workflows/publish-container.yml"
 
 for dockerfile in base core cdn spa; do
   grep -q "nginx/$dockerfile/Dockerfile" "$ROOT/.github/workflows/publish-container.yml"
