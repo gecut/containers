@@ -85,8 +85,16 @@ request() {
   method=$2
   path=$3
   header_file="$tmp_dir/$name.headers"
-  curl -sS --connect-timeout 5 --max-time 15 -X "$method" -o /dev/null -D "$header_file" \
-    -w '%{http_code}' "$base_url$path"
+  case "$method" in
+    HEAD)
+      curl -sS --connect-timeout 5 --max-time 15 --head -o /dev/null -D "$header_file" \
+        -w '%{http_code}' "$base_url$path"
+      ;;
+    *)
+      curl -sS --connect-timeout 5 --max-time 15 -X "$method" -o /dev/null -D "$header_file" \
+        -w '%{http_code}' "$base_url$path"
+      ;;
+  esac
 }
 
 header_value() {
