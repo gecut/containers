@@ -1,0 +1,12 @@
+services:
+  spa:
+    image: registry.example.com/acme/spa:1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      NGINX_SPA_INDEX_URI: /index.html
+    # Inherit the image healthcheck, which verifies /server-info and the shell.
+    restart: unless-stopped

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spa
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: spa
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: spa
+    spec:
+      containers:
+        - name: spa
+          # Replace this with the downstream image built from assets/Dockerfile.
+          # The base SPA image contains no application shell and will fail stage 45.
+          image: registry.example.com/acme/spa:1.0.0
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: NGINX_SPA_INDEX_URI
+              value: /index.html
+          ports:
+            - name: http
+              containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: http
+              # When NGINX_FORCE_DOMAIN is enabled, add a Host httpHeader here.
+            initialDelaySeconds: 2
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /server-info
+              port: http
+              # When NGINX_FORCE_DOMAIN is enabled, add the same Host httpHeader.
+            initialDelaySeconds: 5
+            periodSeconds: 30
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: spa
+spec:
+  selector:
+    app.kubernetes.io/name: spa
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

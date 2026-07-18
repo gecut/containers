@@ -1,0 +1,53 @@
+{
+  "skill_name": "nginx-cdn",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We publish a Vite dashboard as static files. Unknown paths like /users/42 must stay real 404s, not return index.html. Give me a pinned downstream Dockerfile and Compose service using the Gecut image, with public/ copied into the image and an origin verification checklist.",
+      "expected_output": "A minimal pinned nginx/cdn deployment that preserves strict static 404 behavior and verifies cache/header behavior without inventing SPA fallback.",
+      "files": [],
+      "assertions": [
+        "Selects ghcr.io/gecut/nginx/cdn:2.0.0 and does not select nginx/spa or add try_files shell fallback.",
+        "Copies static content into /data with files readable by the nginx worker.",
+        "Includes verification of status, a single Cache-Control field, a single Vary field, ETag/304, and 404 no-store.",
+        "States that TLS and downstream CDN cache behavior are outside the image contract."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Deploy gecut/nginx/cdn behind our controlled load balancer using environment variables only. We need unversioned assets cached for 5 minutes, JSON for 30 seconds, CORS from https://app.example.com, pre-generated WebP, canonical host static.example.com, and rate limiting by real client IP. Give the smallest safe Compose configuration and verification matrix.",
+      "expected_output": "An environment-only customization that changes supported policy values and inherited features without replacing templates or weakening proxy trust.",
+      "files": [],
+      "assertions": [
+        "Uses the documented NGINX_CDN_CACHE_UNVERSIONED_STATIC and NGINX_CDN_CACHE_JSON variables without replacing cache classification.",
+        "Enables CORS, WebP, and canonical host through their documented on/off and hostname variables while preserving one Cache-Control and Vary authority.",
+        "Requires explicit controlled NGINX_TRUSTED_PROXY_CIDRS before enabling global rate limiting by client IP.",
+        "Calls out that WebP image regex locations do not automatically receive the root CORS fragment and verifies the actual image response."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Our build emits assets like /static/app.R9KLMN2Q.js, which are dot-separated uppercase tokens and are not becoming immutable. Show the smallest maintainable customization for gecut/nginx/cdn, including what template to replace, which precedence must remain, and how to validate it across 200/404/POST-like behavior.",
+      "expected_output": "A derived-image template override strategy that changes URI classification without weakening status or method safety.",
+      "files": [],
+      "assertions": [
+        "Explains that cache environment variables change values but cannot change URI match rules.",
+        "Replaces /etc/nginx/templates/http.d/82-cache-policy-map.conf.template in a downstream image pinned to 2.0.0.",
+        "Preserves URI profile then status override then method override and one global Cache-Control authority.",
+        "Requires entrypoint-rendered nginx validation and live checks for the new hash form, 404 no-store, and non-GET/HEAD no-store."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Use ghcr.io/gecut/nginx/cdn:2.0.0 as a reverse proxy for api.internal, add proxy_cache with a purge endpoint, terminate TLS, and cache dynamic API responses. Please provide the production config and describe which NGINX_* variables enable it.",
+      "expected_output": "A clear rejection of unsupported reverse-proxy, proxy_cache, purge, dynamic upstream, and TLS responsibilities, with an appropriate alternative architecture.",
+      "files": [],
+      "assertions": [
+        "States that nginx/cdn is a static-file origin and does not provide reverse proxying, proxy_cache, purge APIs, dynamic upstream caching, or TLS termination.",
+        "Does not fabricate NGINX_* variables or present a proxy template as a supported normal customization.",
+        "Recommends a dedicated ingress or reverse-proxy/cache tier in front of the application upstream.",
+        "Keeps nginx/cdn as an option only for separately built static assets with origin cache metadata."
+      ]
+    }
+  ]
+}

@@ -105,7 +105,7 @@ active_images:
     publication_registry: ghcr
     aliases: []
     documentation_target: nginx/cdn/README.md
-    consumer_skill_target: skills/nginx/cdn
+    consumer_skill_target: skills/nginx-cdn
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
   - id: nginx-spa
@@ -124,7 +124,7 @@ active_images:
     publication_registry: ghcr
     aliases: []
     documentation_target: nginx/spa/README.md
-    consumer_skill_target: skills/nginx/spa
+    consumer_skill_target: skills/nginx-spa
     compatibility: *compatibility_policy
     tag_policy: *tag_policy
   - id: nextjs-base

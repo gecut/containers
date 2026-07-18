@@ -25,11 +25,23 @@
       "skillPath": "skills/create-readme/SKILL.md",
       "computedHash": "d0ece1b2164ce1376e4ab6e98d6ac079df3a2a94f5f02224362b6a1ce2516ae9"
     },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "781bd6d3f9b19f8c9af6b53d8d0e4876d0183841b565db34ca7092ffa412d111"
+    },
     "nginx-config-optimizer": {
       "source": "patricio0312rev/skills",
       "sourceType": "github",
       "skillPath": "ci-cd/nginx-config-optimizer/SKILL.md",
       "computedHash": "2567c0d67b6860f0b94d3dc7d7c548e0d485478cf7d43015415dc4bcde72eaf7"
+    },
+    "skill-creator": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-creator/SKILL.md",
+      "computedHash": "5ea13a6d9f0d4bb694405d79acd00cadec0d21bb138c4dd10fcf3c500cb835c2"
     }
   }
 }

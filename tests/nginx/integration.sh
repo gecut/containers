@@ -157,6 +157,13 @@ vary_count=$(curl -sSI "http://127.0.0.1:$cdn_port/app-C6uTJdX2.js" | grep -ic '
 assert_status 404 "http://127.0.0.1:$cdn_port/missing.js"
 assert_header "http://127.0.0.1:$cdn_port/missing.js" Cache-Control no-store
 assert_header "http://127.0.0.1:$cdn_port/missing.js" X-Content-Type-Options nosniff
+"$(dirname "$0")/../../skills/nginx-cdn/scripts/verify-origin.sh" \
+  --origin "http://127.0.0.1:$cdn_port" \
+  --hashed /app-C6uTJdX2.js \
+  --html / \
+  --json /manifest.webmanifest \
+  --service-worker /service-worker.js \
+  --missing /missing.js
 
 note 'checking SPA routing, strict asset 404, and shell validation'
 mkdir -p "$WORK/spa/assets"
@@ -174,6 +181,13 @@ assert_header "http://127.0.0.1:$spa_port/users/42" Cache-Control must-revalidat
 assert_header "http://127.0.0.1:$spa_port/users/42" X-Content-Type-Options nosniff
 post_status=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "http://127.0.0.1:$spa_port/users/42")
 [ "$post_status" = 403 ] || fail "SPA POST returned $post_status, expected 403"
+"$(dirname "$0")/../../skills/nginx-spa/scripts/verify-spa.sh" \
+  --check-post \
+  --asset /assets/app.abcdef12.js \
+  --deep-route /users/42 \
+  --missing-asset /assets/missing.js \
+  --dotted-route /unknown.route \
+  "http://127.0.0.1:$spa_port"
 
 mkdir -p "$WORK/empty"
 docker run --rm -v "$WORK/empty:/data:ro" "$NGINX_SPA_IMAGE" nginx -t >/dev/null 2>&1 && fail 'SPA started without a shell'

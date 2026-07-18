@@ -55,3 +55,17 @@ Practical precedence:
 - [Core Origin Guide](./core/README.md)
 - [CDN Production Guide](./cdn/README.md)
 - [SPA Hosting Guide](./spa/README.md)
+
+## Consumer Agent Skills
+
+- [`nginx-cdn`](../skills/nginx-cdn/SKILL.md) helps agents select, deploy,
+  customize, and verify the CDN-origin profile.
+- [`nginx-spa`](../skills/nginx-spa/SKILL.md) adds SPA routing, shell readiness,
+  and strict asset-not-found guidance on top of the inherited CDN policy.
+
+Install either skill from this repository with the open `skills` CLI:
+
+```bash
+npx skills add gecut/containers --skill nginx-cdn
+npx skills add gecut/containers --skill nginx-spa
+```

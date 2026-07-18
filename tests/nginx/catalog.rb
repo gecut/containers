@@ -44,6 +44,19 @@ expected_versions.each do |id, version|
   raise "wrong BUILD_VERSION for #{id}" unless dockerfile.match?(/^ARG BUILD_VERSION=#{Regexp.escape(version)}$/)
 end
 
+expected_skills = {
+  "nginx-cdn" => "skills/nginx-cdn",
+  "nginx-spa" => "skills/nginx-spa"
+}
+
+expected_skills.each do |id, expected_target|
+  actual_target = by_id.fetch(id).fetch("consumer_skill_target")
+  raise "wrong consumer skill target for #{id}" unless actual_target == expected_target
+
+  skill_file = File.join(root, actual_target, "SKILL.md")
+  raise "missing consumer skill for #{id}: #{skill_file}" unless File.file?(skill_file)
+end
+
 architecture = File.read(File.join(root, "docs/architecture/image-catalog.md"))
 raise "architecture graph does not contain SPA" unless architecture.include?("nginx-base -> nginx-core -> nginx-cdn -> nginx-spa")
 

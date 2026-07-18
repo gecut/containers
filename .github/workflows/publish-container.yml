@@ -33,7 +33,11 @@ jobs:
           filters: |
             nginx:
               - 'nginx/**'
+              - 'skills/nginx-cdn/**'
+              - 'skills/nginx-spa/**'
+              - 'skills/README.md'
               - 'tests/nginx/**'
+              - 'tests/skills/**'
               - 'catalog/images.yaml'
               - 'docs/architecture/image-catalog.md'
               - '.github/workflows/publish-container.yml'
@@ -60,8 +64,24 @@ jobs:
         run: |
           tests/nginx/static.sh
           ruby tests/nginx/catalog.rb
-          find nginx tests/nginx -type f -name '*.sh' -print0 | xargs -0 shellcheck
+          ruby tests/skills/validate.rb
+          find nginx tests/nginx tests/skills skills/nginx-cdn skills/nginx-spa -type f -name '*.sh' -print0 | xargs -0 shellcheck
+          docker compose -f skills/nginx-cdn/assets/compose.yaml config >/dev/null
+          docker compose -f skills/nginx-spa/assets/compose.yaml config >/dev/null
           ruby -e 'require "yaml"; YAML.safe_load(File.read("catalog/images.yaml"), permitted_classes: [], permitted_symbols: [], aliases: true); YAML.safe_load(File.read(".github/workflows/publish-container.yml"), permitted_classes: [], permitted_symbols: [], aliases: true)'
+
+      - name: Validate Agent Skills specification
+        run: |
+          python3 -m venv /tmp/skills-ref
+          /tmp/skills-ref/bin/pip install --disable-pip-version-check skills-ref==0.1.1
+          /tmp/skills-ref/bin/agentskills validate skills/nginx-cdn
+          /tmp/skills-ref/bin/agentskills validate skills/nginx-spa
+
+      - name: Verify skills.sh discovery
+        run: |
+          npx --yes skills@1.5.19 add . --list | tee /tmp/skills-list.txt
+          grep -Eq 'nginx-cdn' /tmp/skills-list.txt
+          grep -Eq 'nginx-spa' /tmp/skills-list.txt
 
       - name: Lint GitHub Actions workflow
         run: |
@@ -73,7 +93,8 @@ jobs:
         run: |
           docker run --rm --volume "$PWD:/work:ro" --workdir /work \
             ghcr.io/hadolint/hadolint:v2.14.0-debian@sha256:158cd0184dcaa18bd8ec20b61f4c1cabdf8b32a592d062f57bdcb8e4c1d312e2 \
-            hadolint nginx/base/Dockerfile nginx/core/Dockerfile nginx/cdn/Dockerfile nginx/spa/Dockerfile
+            hadolint nginx/base/Dockerfile nginx/core/Dockerfile nginx/cdn/Dockerfile nginx/spa/Dockerfile \
+              skills/nginx-cdn/assets/Dockerfile skills/nginx-spa/assets/Dockerfile
 
       - name: Build dependency closure locally
         env:

@@ -1,0 +1,53 @@
+{
+  "skill_name": "nginx-spa",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "We have a React Router app built by Vite into dist/. Deploy it with ghcr.io/gecut/nginx/spa using Docker Compose on localhost:8080. Browser refreshes on /projects/42 must work, missing /assets/nope.js must be a real 404, and production tags must be pinned. Give me the files and exact verification command.",
+      "expected_output": "A pinned downstream image and Compose deployment that copies dist to /data, preserves SPA fallback and strict asset 404 behavior, and invokes verify-spa.sh.",
+      "files": [],
+      "assertions": [
+        "Uses ghcr.io/gecut/nginx/spa:1.0.0 rather than latest.",
+        "Copies the completed dist directory to /data without replacing the shipped SPA location templates.",
+        "Explains that an extensionless deep route returns the shell with status 200 while a missing JavaScript asset returns 404 with no-store.",
+        "Provides an exact scripts/verify-spa.sh command against http://localhost:8080."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "My static Vue build emits app.html instead of index.html. I want a Kubernetes Deployment of gecut nginx SPA and a reliable health setup. Show the configuration and tell me what fails if app.html is missing.",
+      "expected_output": "A pinned Kubernetes workload with NGINX_SPA_INDEX_URI=/app.html, probes, and accurate stage-45 startup failure guidance.",
+      "files": [],
+      "assertions": [
+        "Sets NGINX_SPA_INDEX_URI to /app.html and states that /data/app.html must be readable.",
+        "Uses a consumer image pinned to a semantic version, checks the shell for readiness, and uses /server-info for liveness.",
+        "Identifies 45-validate-spa-shell.sh as the pre-NGINX failure point for an absent or unreadable shell.",
+        "Does not propose an environment variable that is absent from the documented runtime contract."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Serve an Angular SPA below https://example.com/portal/. The build output contains portal/index.html and portal/assets/. Generate the relevant container configuration and a smoke matrix. Be careful about router base paths and cache behavior.",
+      "expected_output": "A coherent /portal deployment with aligned build/router base, shell URI, filesystem layout, and verification paths.",
+      "files": [],
+      "assertions": [
+        "Sets NGINX_SPA_INDEX_URI=/portal/index.html and retains the portal directory under /data.",
+        "Calls out alignment between bundler public base, Angular router base, ingress rewrite behavior, and the URI visible to NGINX.",
+        "Tests an extensionless deep route under /portal, an existing portal asset, a missing known asset, and a dotted route.",
+        "Explains that an .html shell revalidates by default and that errors use Cache-Control no-store."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Can you deploy my Next.js app with API routes and SSR on ghcr.io/gecut/nginx/spa:1.0.0? I also need NGINX to proxy /api to the Next server and cache those upstream responses. Please write the config.",
+      "expected_output": "A clear rejection of the static-SPA image for SSR/API/proxy-cache requirements and a safe alternative architecture.",
+      "files": [],
+      "assertions": [
+        "States that nginx/spa serves completed static files and does not provide SSR, reverse proxying, or proxy_cache.",
+        "Does not fabricate NGINX_* variables or present an unsupported proxy template as a normal image feature.",
+        "Recommends running the Next.js server runtime and placing a dedicated ingress or reverse proxy in front when needed.",
+        "Distinguishes a genuinely static Next.js export, which may fit, from API routes and SSR, which do not."
+      ]
+    }
+  ]
+}

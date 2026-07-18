@@ -1,0 +1,82 @@
+[
+  {
+    "query": "Our Vite React Router build is copied into /data in ghcr.io/gecut/nginx/spa:1.0.0, but refreshing /orders/42 gives a 404. Diagnose the container locations and give me a safe Compose fix plus curl checks.",
+    "should_trigger": true
+  },
+  {
+    "query": "Create a Kubernetes deployment for my compiled Vue SPA using the Gecut nginx SPA image. It uses /app.html as the shell and needs deep-link, missing-asset, health, and cache verification.",
+    "should_trigger": true
+  },
+  {
+    "query": "I'm publishing Angular under /portal/ with gecut nginx spa. Help align base href, the on-disk portal/index.html, NGINX_SPA_INDEX_URI, ingress paths, and strict asset 404s.",
+    "should_trigger": true
+  },
+  {
+    "query": "Audit these response headers from ghcr.io/gecut/nginx/spa: deep links are cached for an hour, errors say no-store, and CORS appears only on some URLs. Explain the inherited CDN maps and location scope.",
+    "should_trigger": true
+  },
+  {
+    "query": "My gecut nginx SPA pod exits with 45-validate-spa-shell.sh saying /data/index.html is unreadable. The dist volume is read-only. Find the likely mount and permissions issue.",
+    "should_trigger": true
+  },
+  {
+    "query": "Please add an application-specific CSP and Permissions-Policy to a downstream image based on ghcr.io/gecut/nginx/spa:1.0.0 without breaking its Cache-Control ownership.",
+    "should_trigger": true
+  },
+  {
+    "query": "We enabled NGINX_AUTO_WEBP and a CDN in front of our Gecut SPA container. JPEGs are intermittently wrong between browsers. Show how to verify adjacent webp files and Vary at origin and edge.",
+    "should_trigger": true
+  },
+  {
+    "query": "Set up canonical app.example.com redirects and global rate limiting for nginx/spa behind our private load balancer. I need exact trusted CIDR guidance and no false claim that this terminates TLS.",
+    "should_trigger": true
+  },
+  {
+    "query": "A route named /account.settings should open our client router, but it is 404 in the Gecut SPA image while /account/settings works. Is this expected, and what are the safe options?",
+    "should_trigger": true
+  },
+  {
+    "query": "Give me a release-ready Dockerfile and verification checklist for a Svelte SPA dist directory on ghcr.io/gecut/nginx/spa, including ETag, 304, service worker, shell, and missing asset behavior.",
+    "should_trigger": true
+  },
+  {
+    "query": "Optimize my general nginx reverse proxy for a Node API: upstream keepalive, WebSockets, TLS certificates, OCSP stapling, and proxy_cache. We do not use any Gecut container images.",
+    "should_trigger": false
+  },
+  {
+    "query": "Deploy a Next.js standalone server with SSR, server actions, and /api routes. It runs with node server.js and needs a Kubernetes readiness probe.",
+    "should_trigger": false
+  },
+  {
+    "query": "My React Router component redirects to /login in a unit test. Fix the TypeScript route guards and Vitest mocks; deployment and nginx are already working.",
+    "should_trigger": false
+  },
+  {
+    "query": "Configure Cloudflare cache rules, Workers, DNS, SSL mode, and WAF for example.com. The origin type has not been chosen yet.",
+    "should_trigger": false
+  },
+  {
+    "query": "Build an NGINX Ingress Controller annotation set to proxy a gRPC service with mTLS and cert-manager. This is not a static website.",
+    "should_trigger": false
+  },
+  {
+    "query": "I need a plain nginx:1.30 container to serve downloadable ISO files with byte ranges and directory listing. There is no SPA and no gecut image.",
+    "should_trigger": false
+  },
+  {
+    "query": "Change our Vite config so assets use /portal/ and update React Router basename. Don't touch or discuss the already-approved web server deployment.",
+    "should_trigger": false
+  },
+  {
+    "query": "Design a service worker caching strategy for offline use with Workbox, background sync, and precaching. Hosting headers are outside this task.",
+    "should_trigger": false
+  },
+  {
+    "query": "Review this raw nginx.conf for security headers and gzip. It belongs to an Ubuntu VM managed by Ansible, not the Gecut nginx SPA image.",
+    "should_trigger": false
+  },
+  {
+    "query": "Package a static documentation site where every route is emitted as an HTML file. We want strict file serving with no client-side fallback and are considering ghcr.io/gecut/nginx/cdn.",
+    "should_trigger": false
+  }
+]
