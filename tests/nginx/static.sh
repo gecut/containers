@@ -28,11 +28,13 @@ grep -q "minor_tag=\${version%.*}" "$ROOT/.github/workflows/publish-container.ym
 grep -q -- "-t \"\$repository:\$patch_tag\"" "$ROOT/.github/workflows/publish-container.yml"
 grep -q -- "-t \"\$repository:\$minor_tag\"" "$ROOT/.github/workflows/publish-container.yml"
 grep -q -- "-t \"\$repository:\$major_tag\"" "$ROOT/.github/workflows/publish-container.yml"
-grep -q 'allow_version_overwrite:' "$ROOT/.github/workflows/publish-container.yml"
-grep -q 'type: boolean' "$ROOT/.github/workflows/publish-container.yml"
-grep -q 'ALLOW_VERSION_OVERWRITE:' "$ROOT/.github/workflows/publish-container.yml"
-grep -q 'SHA tags remain immutable' "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'Preflight immutable SHA tags' "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'Existing version tags will be replaced; SHA tags remain immutable' "$ROOT/.github/workflows/publish-container.yml"
 grep -q 'already points to the candidate digest' "$ROOT/.github/workflows/publish-container.yml"
+if grep -q 'immutable tags are never overwritten\|ALLOW_VERSION_OVERWRITE\|allow_version_overwrite' "$ROOT/.github/workflows/publish-container.yml"; then
+  echo >&2 'Version tags must be promoted without a manual overwrite gate'
+  exit 1
+fi
 
 for dockerfile in base core cdn spa; do
   grep -q "nginx/$dockerfile/Dockerfile" "$ROOT/.github/workflows/publish-container.yml"

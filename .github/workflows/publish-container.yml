@@ -4,12 +4,6 @@ name: Build, Test & Publish Containers
 
 on:
   workflow_dispatch:
-    inputs:
-      allow_version_overwrite:
-        description: Replace existing NGINX patch version tags (SHA tags remain immutable)
-        required: false
-        default: false
-        type: boolean
   push:
     branches: [main]
   pull_request:
@@ -218,9 +212,7 @@ jobs:
             cosign sign --yes "$image"
           done
 
-      - name: Preflight immutable tags
-        env:
-          ALLOW_VERSION_OVERWRITE: ${{ github.event_name == 'workflow_dispatch' && inputs.allow_version_overwrite || 'false' }}
+      - name: Preflight immutable SHA tags
         run: |
           set -euo pipefail
           validate_version() {
@@ -234,11 +226,6 @@ jobs:
           validate_version "$NGINX_CORE_VERSION"
           validate_version "$NGINX_CDN_VERSION"
           validate_version "$NGINX_SPA_VERSION"
-
-          case "$ALLOW_VERSION_OVERWRITE" in
-            true|false) ;;
-            *) echo >&2 'ALLOW_VERSION_OVERWRITE must be true or false'; exit 1 ;;
-          esac
 
           resolve_digest() {
             docker buildx imagetools inspect "$1" | awk '$1 == "Digest:" && digest == "" { digest=$2 } END { if (digest == "") exit 1; print digest }'
@@ -261,22 +248,7 @@ jobs:
               echo "$reference already points to the candidate digest"
             fi
           done
-
-          if [ "$ALLOW_VERSION_OVERWRITE" = false ]; then
-            references="
-            $REGISTRY/$REGISTRY_USER/nginx/base:$NGINX_BASE_VERSION
-            $REGISTRY/$REGISTRY_USER/nginx/core:$NGINX_CORE_VERSION
-            $REGISTRY/$REGISTRY_USER/nginx/cdn:$NGINX_CDN_VERSION
-            $REGISTRY/$REGISTRY_USER/nginx/spa:$NGINX_SPA_VERSION"
-          else
-            echo 'Version-tag overwrite enabled for this manual run; SHA tags remain immutable'
-          fi
-          for reference in $references; do
-            if docker buildx imagetools inspect "$reference" >/dev/null 2>&1; then
-              echo >&2 "$reference already exists; immutable tags are never overwritten"
-              exit 1
-            fi
-          done
+          echo 'Existing version tags will be replaced; SHA tags remain immutable'
 
       - name: Promote version tags
         run: |
