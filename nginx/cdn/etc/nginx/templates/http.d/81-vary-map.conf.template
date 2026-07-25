@@ -1,4 +1,16 @@
-map $uri $cdn_vary {
-  default "Accept-Encoding";
-  ~*\.(?:png|jpe?g)$ "Accept, Accept-Encoding";
+map "$NGINX_GZIP:$NGINX_GZIP_STATIC" $cdn_vary_accept_encoding {
+  default "";
+  ~on "Accept-Encoding";
+}
+
+map "$NGINX_AUTO_WEBP:$uri" $cdn_vary_accept {
+  default "";
+  ~*^on:.*\.(?:png|jpe?g)$ "Accept";
+}
+
+map "$cdn_vary_accept:$cdn_vary_accept_encoding" $cdn_vary {
+  default "";
+  "Accept:" "Accept";
+  ":Accept-Encoding" "Accept-Encoding";
+  "Accept:Accept-Encoding" "Accept, Accept-Encoding";
 }

@@ -69,37 +69,36 @@ profile.
 | --- | --- |
 | Hex-fingerprinted asset, for example `main.abc12345.chunk.js` | `public, max-age=31536000, immutable, s-maxage=31536000` |
 | Vite-style asset, for example `app-C6uTJdX2.js` | `public, max-age=31536000, immutable, s-maxage=31536000` |
+| Image with any supported filename | `public, max-age=0, must-revalidate, s-maxage=86400` |
 | Unversioned static file | `public, max-age=3600, stale-while-revalidate=30` |
 | `/`, a URI ending in `/`, `.htm`, or `.html` | `public, max-age=0, must-revalidate, s-maxage=0` |
 | `.json` or `.webmanifest` | `public, max-age=60, stale-while-revalidate=30` |
 | `service-worker.js` or `sw.js` | `no-cache` |
 | Any `4xx` or `5xx` response | `no-store` |
 | Any method other than `GET` or `HEAD` | `no-store` |
+| Any request with `Authorization` | `private, no-store` |
 
 Policy evaluation is deliberately layered:
 
-1. `$uri` selects `hashed`, `service_worker`, `html`, `json`, or the default
-   `static_unversioned` profile. URI regexes are evaluated in template order;
-   hashed patterns precede the other regex profiles.
+1. `$uri` selects `image`, `hashed`, `service_worker`, `html`, `json`, or the
+   default `static_unversioned` profile. Image extensions are selected before
+   filename hash heuristics.
 2. A `4xx` or `5xx` status replaces the URI policy with the error policy.
 3. A method other than `GET` or `HEAD` replaces either result with the error
    policy.
+4. An Authorization request is forced to `private, no-store`.
 
-The second hashed matcher accepts a broad hyphenated token of eight or more
-letters, digits, `_`, or `-`. It recognizes modern bundler output, but a
-human-readable filename such as `hero-marketing.svg` can also look
-fingerprinted. Use genuinely content-addressed filenames or override the
-classification map if such false positives are possible. A renamed service
-worker that itself matches a hashed pattern also receives the hashed policy
-because hashed matching comes first; keep the conventional `service-worker.js`
-or `sw.js` name unless the map is customized.
+Images are never classified as hashed by filename. Non-image build assets use
+dot-delimited hexadecimal hashes or mixed-case Vite-style tokens containing a
+digit. Long immutable caching still requires a content-addressed URL.
 
 ### Validators and representation variance
 
 - ETags are enabled, so a matching `If-None-Match` request can return `304`.
-- Every response has `Vary: Accept-Encoding`.
-- `.jpg`, `.jpeg`, and `.png` URIs have `Vary: Accept, Accept-Encoding` because
-  enabling automatic WebP can select a different representation.
+- `Accept-Encoding` is present only when gzip or gzip-static can vary bytes.
+- `.jpg`, `.jpeg`, and `.png` URIs add `Accept` only when automatic WebP can
+  select a different representation.
+- No `Vary` field is emitted when neither feature changes representation.
 - The inherited `expires` policy is set to `off`. `Cache-Control` is therefore
   the single cache authority emitted by the stock image.
 
@@ -223,6 +222,8 @@ NGINX syntax is validated at stage `99`.
 | --- | --- | --- |
 | `NGINX_CDN_CACHE_HASHED` | `public, max-age=31536000, immutable` | Base policy for classified fingerprinted files; no controls, quotes, apostrophes, or backslashes |
 | `NGINX_CDN_S_MAXAGE` | `31536000` | Unsigned integer appended as `s-maxage` to the hashed policy |
+| `NGINX_CDN_CACHE_IMAGE` | `public, max-age=0, must-revalidate` | Base policy for supported image extensions, independent of filename |
+| `NGINX_CDN_IMAGE_S_MAXAGE` | `86400` | Unsigned integer appended as `s-maxage` to the image policy |
 | `NGINX_CDN_CACHE_UNVERSIONED_STATIC` | `public, max-age=3600, stale-while-revalidate=30` | Default URI policy; same safe-text validation |
 | `NGINX_CDN_CACHE_HTML` | `public, max-age=0, must-revalidate` | Base HTML/directory policy; same safe-text validation |
 | `NGINX_CDN_HTML_S_MAXAGE` | `0` | Unsigned integer appended as `s-maxage` to the HTML policy |
@@ -268,13 +269,14 @@ NGINX syntax is validated at stage `99`.
 | `NGINX_TCP_NOPUSH` | `on` | `on` or `off` |
 | `NGINX_TCP_NODELAY` | `on` | `on` or `off` |
 | `NGINX_OPEN_FILE_CACHE` | `max=1000 inactive=30m` | NGINX directive arguments; `;`, `{`, and `}` are rejected |
-| `NGINX_OPEN_FILE_CACHE_VALID` | `30s` | NGINX time |
+| `NGINX_OPEN_FILE_CACHE_VALID` | `1s` | NGINX time; short by default for live uploads |
 | `NGINX_OPEN_FILE_CACHE_MIN_USES` | `2` | Unsigned integer |
+| `NGINX_OPEN_FILE_CACHE_ERRORS` | `off` | `on` or `off`; negative lookup caching is disabled for live uploads |
 | `NGINX_KEEPALIVE_TIMEOUT` | `65` | NGINX time |
 | `NGINX_KEEPALIVE_REQUESTS` | `1000` | Unsigned integer |
 | `NGINX_GZIP` | `on` | `on` or `off` |
 | `NGINX_GZIP_STATIC` | `on` | `on` or `off`; serves precompressed `.gz` files when available |
-| `NGINX_GZIP_VARY` | `off` | `on` or `off`; the CDN policy already emits `Vary: Accept-Encoding` |
+| `NGINX_GZIP_VARY` | `off` | `on` or `off`; keep off because the CDN map owns conditional Vary |
 | `NGINX_GZIP_COMP_LEVEL` | `5` | Integer `1`–`9` |
 | `NGINX_GZIP_MIN_LENGTH` | `256` | Unsigned byte count |
 | `NGINX_EXPIRES_DYNAMIC` | `off` | Safe NGINX `expires` value; keep `off` to retain one cache authority |
@@ -395,6 +397,7 @@ docker run --rm -p 8080:80 \
 - Methods other than `GET`, `HEAD`, and `OPTIONS` are denied in the stock root
   location. Specialized downstream locations must enforce their own method
   policy.
+- Requests carrying `Authorization` are never shared-cacheable.
 - `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, and
   `Referrer-Policy: strict-origin-when-cross-origin` are emitted with `always`.
 - CSP, HSTS, authentication, WAF behavior, and TLS are deployment-owned.
@@ -441,9 +444,24 @@ content or provide a writable root.
 
 ### Open-file cache and mutable mounts
 
-The stock image caches file lookups, including errors. Immutable content is the
-recommended deployment model. If files are changed in place, account for
-`NGINX_OPEN_FILE_CACHE_VALID=30s` or disable/tune the open-file cache.
+The stock CDN image does not cache lookup errors and revalidates cached file
+metadata after `1s`, so a newly uploaded or overwritten path becomes visible
+quickly. Immutable baked content may increase the interval and enable
+`NGINX_OPEN_FILE_CACHE_ERRORS`.
+
+### ArvanCloud edge compatibility
+
+Enable ArvanCloud Origin Cache Control so origin `Cache-Control` remains
+authoritative. `max-age` controls browsers and `s-maxage` controls Arvan's
+shared cache. This origin ignores query arguments when selecting file bytes;
+Arvan's ignore-query mode is safe only when no transform or signed-query layer
+changes the representation.
+
+Order Arvan page rules as bypass/private, health and errors, mutable public
+files, immutable versioned assets, then a conservative fallback. Keep Arvan's
+ignore-Vary option disabled when gzip or automatic WebP is enabled. Mutable
+URLs that require immediate replacement need targeted purge and client-side
+verification of `X-Cache` and `Age`; a `MISS` alone does not prove storage.
 
 ### Resolver configuration does not create proxying
 
@@ -498,7 +516,7 @@ file, `304` for the matching conditional request, and `no-store` on the `404`.
 | Stage `40` reports a read-only document root | Robots blocking needs to create/replace `robots.txt` | Bake the policy into content or make the root writable |
 | Stage `91`–`94` removes a snippet | Its feature flag is empty or `off` | Set the documented flag to `on` and inspect `nginx -T` |
 | `99-validate-nginx.sh` / `nginx: configuration file ... test failed` | A rendered value or custom template is invalid NGINX | Inspect the rendered output with the startup logs and `nginx -T` after correcting it |
-| Asset unexpectedly has one-year cache | Human-readable name matched the broad hyphenated hash regex | Rename it or replace the classification map |
+| Image has an unexpected cache policy | Image profile envs differ from the stock values | Inspect `NGINX_CDN_CACHE_IMAGE` and `NGINX_CDN_IMAGE_S_MAXAGE` |
 | Error has application cache policy | A downstream location added a competing header | Remove duplicate cache authority and preserve status override |
 | All proxied clients receive `429` together | Proxy address is being used as client identity | Configure only the actual trusted proxy CIDRs and correct real-IP header |
 | WebP/CORS behavior differs by file type | Regex location precedence bypasses the root CORS snippet | Inspect `nginx -T` and add an explicit location-aware policy |

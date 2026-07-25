@@ -14,6 +14,13 @@ grep -q 'NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1' "$ROOT/nginx/core/Dockerfile"
 grep -q 'ARG BUILD_VERSION=2.0.0' "$ROOT/nginx/cdn/Dockerfile"
 grep -q 'ARG BUILD_VERSION=1.0.0' "$ROOT/nginx/spa/Dockerfile"
 grep -q 'parent: nginx-cdn' "$ROOT/catalog/images.yaml"
+grep -q 'NGINX_CDN_CACHE_IMAGE="public, max-age=0, must-revalidate"' "$ROOT/nginx/cdn/Dockerfile"
+grep -q 'NGINX_CDN_IMAGE_S_MAXAGE=86400' "$ROOT/nginx/cdn/Dockerfile"
+grep -q 'NGINX_OPEN_FILE_CACHE_ERRORS=off' "$ROOT/nginx/cdn/Dockerfile"
+grep -q 'NGINX_OPEN_FILE_CACHE_VALID=1s' "$ROOT/nginx/cdn/Dockerfile"
+grep -q 'map \$http_authorization \$cdn_cache_control' "$ROOT/nginx/cdn/etc/nginx/templates/http.d/82-cache-policy-map.conf.template"
+grep -q 'private, no-store' "$ROOT/nginx/cdn/etc/nginx/templates/http.d/82-cache-policy-map.conf.template"
+grep -q 'NGINX_AUTO_WEBP:\$uri' "$ROOT/nginx/cdn/etc/nginx/templates/http.d/81-vary-map.conf.template"
 
 for variable in NGINX_BASE_VERSION NGINX_CORE_VERSION NGINX_CDN_VERSION NGINX_SPA_VERSION; do
   version=$(sed -n "s/^[[:space:]]*$variable:[[:space:]]*//p" "$ROOT/.github/workflows/publish-container.yml")
@@ -28,13 +35,19 @@ grep -q "minor_tag=\${version%.*}" "$ROOT/.github/workflows/publish-container.ym
 grep -q -- "-t \"\$repository:\$patch_tag\"" "$ROOT/.github/workflows/publish-container.yml"
 grep -q -- "-t \"\$repository:\$minor_tag\"" "$ROOT/.github/workflows/publish-container.yml"
 grep -q -- "-t \"\$repository:\$major_tag\"" "$ROOT/.github/workflows/publish-container.yml"
-grep -q 'Preflight immutable SHA tags' "$ROOT/.github/workflows/publish-container.yml"
-grep -q 'Existing version tags will be replaced; SHA tags remain immutable' "$ROOT/.github/workflows/publish-container.yml"
-grep -q 'already points to the candidate digest' "$ROOT/.github/workflows/publish-container.yml"
-if grep -q 'immutable tags are never overwritten\|ALLOW_VERSION_OVERWRITE\|allow_version_overwrite' "$ROOT/.github/workflows/publish-container.yml"; then
-  echo >&2 'Version tags must be promoted without a manual overwrite gate'
+grep -q -- '-t "$repository:$sha_tag"' "$ROOT/.github/workflows/publish-container.yml"
+grep -q -- '-t "$repository:latest"' "$ROOT/.github/workflows/publish-container.yml"
+grep -q 'Promote all NGINX tags' "$ROOT/.github/workflows/publish-container.yml"
+if grep -q 'Preflight immutable SHA tags\|already points to the candidate digest\|ALLOW_VERSION_OVERWRITE\|allow_version_overwrite' "$ROOT/.github/workflows/publish-container.yml"; then
+  echo >&2 'All active NGINX tags must be repointed without an overwrite gate'
   exit 1
 fi
+
+for image in base core cdn spa; do
+  temp_var=$(printf '%s' "$image" | tr '[:lower:]' '[:upper:]')
+  pattern=$(printf 'promote_image "$%s_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/%s"' "$temp_var" "$image")
+  grep -Fq "$pattern" "$ROOT/.github/workflows/publish-container.yml"
+done
 
 for dockerfile in base core cdn spa; do
   grep -q "nginx/$dockerfile/Dockerfile" "$ROOT/.github/workflows/publish-container.yml"

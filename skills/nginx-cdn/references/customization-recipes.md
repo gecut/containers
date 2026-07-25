@@ -32,13 +32,17 @@ services:
     image: ghcr.io/gecut/nginx/cdn:2.0.0
     environment:
       NGINX_CDN_CACHE_UNVERSIONED_STATIC: "public, max-age=300, stale-while-revalidate=30"
+      NGINX_CDN_CACHE_IMAGE: "public, max-age=0, must-revalidate"
+      NGINX_CDN_IMAGE_S_MAXAGE: "86400"
       NGINX_CDN_CACHE_JSON: "public, max-age=30, stale-while-revalidate=30"
       NGINX_CDN_HTML_S_MAXAGE: "0"
     volumes:
       - ./public:/data:ro
 ```
 
-Do not use environment values to make mutable filenames immutable. Fix the build’s content hashing first.
+Set the image policy to one-year immutable only when every byte change creates
+a new URL. The image profile is extension-based and deliberately ignores
+filename hash heuristics.
 
 ## Enable trusted client IP rewriting
 
@@ -65,7 +69,8 @@ NGINX still listens on plain HTTP inside the container. TLS is expected at the i
 
 - Place `app.js.gz` next to `app.js`; `NGINX_GZIP_STATIC=on` is already the CDN default.
 - Place `photo.jpg.webp` next to `photo.jpg` and set `NGINX_AUTO_WEBP=on`.
-- Verify JPEG/PNG returns `Vary: Accept, Accept-Encoding`, serves WebP only when accepted, and falls back to the original.
+- Verify JPEG/PNG returns `Vary: Accept, Accept-Encoding` when gzip and WebP are
+  both active, serves WebP only when accepted, and falls back to the original.
 
 If CORS is also required for image responses, replace the WebP location deliberately because the stock regex location does not include the root CORS fragment.
 
@@ -84,7 +89,7 @@ COPY --chown=nginx:nginx public/ /data/
 Start by copying the current upstream template, then make the smallest rule change. Preserve this pipeline:
 
 ```text
-URI profile -> status override -> method override -> one global Cache-Control header
+URI profile -> status override -> method override -> Authorization guard -> one global Cache-Control header
 ```
 
 Keep 4xx/5xx and non-GET/HEAD as `no-store`. Keep a single global Vary authority. A parent release can change the upstream template; review the replacement during every parent upgrade.

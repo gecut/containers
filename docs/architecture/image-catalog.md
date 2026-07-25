@@ -44,8 +44,13 @@ Parent changes that affect a child require a new child release. The release mech
 
 ## Compatibility contract
 
-- Released exact SemVer tags are immutable and remain pullable.
-- SHA tags are immutable and remain pullable.
+- For the active NGINX family, exact SemVer, SHA, major, minor, and `latest`
+  tags are moving aliases and every successful publication repoints them to the
+  newly verified digest.
+- For non-NGINX active images, released exact SemVer and SHA tags remain
+  immutable and pullable.
+- Only an OCI digest reference such as
+  `ghcr.io/gecut/nginx/cdn@sha256:...` is immutable for an active NGINX image.
 - Breaking public behavior or configuration changes require a major release.
 - Backward-compatible capabilities use a minor release.
 - Backward-compatible fixes use a patch release.
@@ -58,13 +63,20 @@ Parent changes that affect a child require a new child release. The release mech
 
 ## Tag policy
 
-Exact SemVer tags such as `1.0.0` and SHA tags are immutable. Major tags, minor tags, and `latest` are moving convenience aliases governed by release policy. Archived tags must not be reused or repointed.
+For active NGINX packages, exact SemVer tags such as `2.0.0`, SHA tags, major
+tags, minor tags, and `latest` are moving aliases. If any of these tags already
+exists, a successful publication overwrites it with the newly tested and signed
+digest. Consumers that require immutability must pin the digest, not a tag.
 
-Every successful image publication expands its configured `major.minor.patch`
-version into three pullable tags. For example, `2.3.4` publishes immutable
-patch tag `2.3.4` and updates the moving compatibility aliases `2.3` and `2`.
-Publishing new content without incrementing the patch version fails preflight
-instead of overwriting the existing exact tag.
+For other active image families, exact SemVer and SHA tags remain immutable;
+major, minor, and `latest` remain moving convenience aliases. Archived tags
+must not be reused or repointed.
+
+Every successful NGINX publication expands its configured `major.minor.patch`
+version into exact, minor, major, SHA, and `latest` tags and repoints all five
+to the verified release digest. Candidate tags remain unique internal staging
+references. Frozen, archived, and disabled Docker Hub packages are not
+repointed by this workflow.
 
 ## Legacy inventory and support classification
 

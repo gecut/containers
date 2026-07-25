@@ -51,12 +51,17 @@ Resolve `SKILL_ROOT` to the installed directory containing this skill's
   --hashed /assets/app-C6uTJdX2.js \
   --html / \
   --json /manifest.webmanifest \
-  --service-worker /service-worker.js
+  --service-worker /service-worker.js \
+  --image /images/logo.webp
 ```
 
 Use `--help` for optional paths, stock-policy expectations, and customized TTL
 expectations. The script performs GET/HEAD requests only, creates temporary
 local header/body files, and never mutates the origin.
+
+Against an ArvanCloud hostname, add `--edge-probes 3`. The checker reports
+`X-Cache` and `Age` for each probe without treating the first `MISS` as proof
+that the response was stored.
 
 Manual probes:
 
@@ -73,7 +78,8 @@ curl -sSI http://127.0.0.1:8080/app.abcdef12.js |
   awk 'BEGIN{IGNORECASE=1} /^Cache-Control:/{n++} END{print n+0}'
 ```
 
-Expected count is one for both Cache-Control and Vary.
+Expected Cache-Control count is one. Vary count is zero when neither
+compression nor WebP can change bytes, otherwise one.
 
 ## Symptom map
 
@@ -84,10 +90,11 @@ Expected count is one for both Cache-Control and Vary.
 - Confirm the request is GET or HEAD.
 - Inspect effective `NGINX_CDN_CACHE_HASHED` and `NGINX_CDN_S_MAXAGE`.
 
-### Mutable file became immutable
+### Image has an unexpected policy
 
-- The heuristic may have mistaken a human suffix for a fingerprint.
-- Rename the asset using a controlled content-hash convention or replace the URI classifier.
+- All supported image extensions use the explicit image profile, independent
+  of filename shape.
+- Inspect `NGINX_CDN_CACHE_IMAGE` and `NGINX_CDN_IMAGE_S_MAXAGE`.
 - Purge the downstream CDN if the incorrect response was already stored.
 
 ### Missing asset is cached
@@ -100,7 +107,8 @@ Expected count is one for both Cache-Control and Vary.
 
 - Search custom templates for `add_header Cache-Control`, `add_header Vary`, and `expires`.
 - Keep the CDN HTTP-level maps as the sole authority.
-- Keep `NGINX_GZIP_VARY=off`; explicit CDN Vary already includes Accept-Encoding.
+- Keep `NGINX_GZIP_VARY=off`; the CDN Vary map conditionally adds
+  Accept-Encoding when gzip or gzip-static is active.
 
 ### WebP is not served
 

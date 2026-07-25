@@ -87,8 +87,10 @@ These are the public inherited controls most relevant to consumers:
 | `NGINX_GZIP_VARY` | `off` in CDN | Disabled because CDN emits one explicit Vary field |
 | `NGINX_GZIP_COMP_LEVEL` | `5` | Compression level 1-9 |
 | `NGINX_GZIP_MIN_LENGTH` | `256` | Minimum response length |
+| `NGINX_OPEN_FILE_CACHE_VALID` | `1s` in CDN | Revalidation interval for mutable file metadata |
+| `NGINX_OPEN_FILE_CACHE_ERRORS` | `off` in CDN | Prevent negative lookup caching for live uploads |
 
-Performance controls remain available: `NGINX_SENDFILE`, `NGINX_TCP_NOPUSH`, `NGINX_TCP_NODELAY`, `NGINX_OPEN_FILE_CACHE`, `NGINX_OPEN_FILE_CACHE_VALID`, `NGINX_OPEN_FILE_CACHE_MIN_USES`, `NGINX_KEEPALIVE_TIMEOUT`, `NGINX_KEEPALIVE_REQUESTS`, `NGINX_WORKER_CONNECTIONS`, `NGINX_WORKER_RLIMIT_NOFILE`, and `NGINX_MULTI_ACCEPT`.
+Performance controls remain available: `NGINX_SENDFILE`, `NGINX_TCP_NOPUSH`, `NGINX_TCP_NODELAY`, `NGINX_OPEN_FILE_CACHE`, `NGINX_OPEN_FILE_CACHE_VALID`, `NGINX_OPEN_FILE_CACHE_MIN_USES`, `NGINX_OPEN_FILE_CACHE_ERRORS`, `NGINX_KEEPALIVE_TIMEOUT`, `NGINX_KEEPALIVE_REQUESTS`, `NGINX_WORKER_CONNECTIONS`, `NGINX_WORKER_RLIMIT_NOFILE`, and `NGINX_MULTI_ACCEPT`.
 
 CDN deliberately sets `NGINX_EXPIRES_DYNAMIC`, `NGINX_EXPIRES_STATIC`, and `NGINX_EXPIRES_DEFAULT` to `off`. Keep them off so `Cache-Control` remains the single cache authority.
 

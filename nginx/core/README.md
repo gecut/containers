@@ -47,6 +47,7 @@ The image does not terminate TLS and does not proxy requests.
 | `NGINX_LIMIT_REQ_BURST` | `100` | Immediate burst when enabled |
 | `NGINX_DISALLOW_ROBOTS` | `off` | Replace only the bundled permissive robots file |
 | `NGINX_DISABLE_SYMLINKS` | `off` | NGINX `disable_symlinks` policy |
+| `NGINX_OPEN_FILE_CACHE_ERRORS` | `on` | `on` or `off`; controls negative file-lookup caching |
 
 ## Run
 

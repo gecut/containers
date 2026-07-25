@@ -15,8 +15,9 @@ must already exist. PATH values begin with '/'. The script checks:
   - short JSON/manifest caching;
   - service-worker no-cache;
   - missing-asset 404 with no-store;
-  - exactly one Cache-Control and Vary field;
-  - Accept plus Accept-Encoding Vary tokens for --image, when supplied.
+  - exactly one Cache-Control field and the selected conditional Vary policy;
+  - mutable-safe image caching for --image, when supplied;
+  - optional downstream edge probes that report X-Cache and Age.
 
 Policy options default to the stock image values and can be changed when the
 origin intentionally overrides cache TTLs:
@@ -25,6 +26,13 @@ origin intentionally overrides cache TTLs:
   --html-max-age SECONDS      default: 0
   --html-s-maxage SECONDS     default: 0
   --json-max-age SECONDS      default: 60
+  --image-max-age SECONDS     default: 0
+  --image-s-maxage SECONDS    default: 86400
+  --vary MODE                 none|accept-encoding; default: accept-encoding
+  --image-vary MODE           none|accept|accept-encoding|both; default:
+                              accept-encoding
+  --edge-probes COUNT         repeat the hashed request and report edge headers;
+                              default: 0
 
 Example:
   verify-origin.sh \
@@ -52,10 +60,15 @@ hashed_s_maxage=31536000
 html_max_age=0
 html_s_maxage=0
 json_max_age=60
+image_max_age=0
+image_s_maxage=86400
+vary_mode=accept-encoding
+image_vary_mode=accept-encoding
+edge_probes=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --origin|--hashed|--html|--json|--service-worker|--missing|--image|--hashed-max-age|--hashed-s-maxage|--html-max-age|--html-s-maxage|--json-max-age)
+    --origin|--hashed|--html|--json|--service-worker|--missing|--image|--hashed-max-age|--hashed-s-maxage|--html-max-age|--html-s-maxage|--json-max-age|--image-max-age|--image-s-maxage|--vary|--image-vary|--edge-probes)
       [ "$#" -ge 2 ] || { echo >&2 "verify-origin.sh: $1 requires a value"; exit 2; }
       case "$1" in
         --origin) origin=$2 ;;
@@ -70,6 +83,11 @@ while [ "$#" -gt 0 ]; do
         --html-max-age) html_max_age=$2 ;;
         --html-s-maxage) html_s_maxage=$2 ;;
         --json-max-age) json_max_age=$2 ;;
+        --image-max-age) image_max_age=$2 ;;
+        --image-s-maxage) image_s_maxage=$2 ;;
+        --vary) vary_mode=$2 ;;
+        --image-vary) image_vary_mode=$2 ;;
+        --edge-probes) edge_probes=$2 ;;
       esac
       shift 2
       ;;
@@ -105,9 +123,12 @@ done
 if [ -n "$image" ]; then
   case "$image" in /*) ;; *) echo >&2 'verify-origin.sh: --image must begin with /'; exit 2 ;; esac
 fi
-for value in "$hashed_max_age" "$hashed_s_maxage" "$html_max_age" "$html_s_maxage" "$json_max_age"; do
+for value in "$hashed_max_age" "$hashed_s_maxage" "$html_max_age" "$html_s_maxage" \
+  "$json_max_age" "$image_max_age" "$image_s_maxage" "$edge_probes"; do
   case "$value" in ''|*[!0-9]*) echo >&2 'verify-origin.sh: policy ages must be unsigned integers'; exit 2 ;; esac
 done
+case "$vary_mode" in none|accept-encoding) ;; *) echo >&2 'verify-origin.sh: --vary must be none or accept-encoding'; exit 2 ;; esac
+case "$image_vary_mode" in none|accept|accept-encoding|both) ;; *) echo >&2 'verify-origin.sh: invalid --image-vary mode'; exit 2 ;; esac
 
 tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/nginx-cdn-verify.XXXXXX")
 trap 'rm -rf "$tmpdir"' 0 HUP INT TERM
@@ -184,14 +205,37 @@ assert_header_token() {
     fail "$label $name does not contain the exact token '$token': $value"
 }
 
+assert_vary() {
+  mode=$1
+  label=$2
+  count=$(header_count Vary)
+  case "$mode" in
+    none)
+      [ "$count" = 0 ] || fail "$label returned $count Vary fields, expected none"
+      ;;
+    accept)
+      [ "$count" = 1 ] || fail "$label returned $count Vary fields, expected 1"
+      assert_header_token Vary Accept "$label"
+      ;;
+    accept-encoding)
+      [ "$count" = 1 ] || fail "$label returned $count Vary fields, expected 1"
+      assert_header_token Vary Accept-Encoding "$label"
+      ;;
+    both)
+      [ "$count" = 1 ] || fail "$label returned $count Vary fields, expected 1"
+      assert_header_token Vary Accept "$label"
+      assert_header_token Vary Accept-Encoding "$label"
+      ;;
+  esac
+}
+
 fetch_head "$hashed"
 assert_status 200 'hashed fixture'
 assert_one_header Cache-Control 'hashed fixture'
-assert_one_header Vary 'hashed fixture'
 assert_header_token Cache-Control immutable 'hashed fixture'
 assert_header_token Cache-Control "max-age=$hashed_max_age" 'hashed fixture'
 assert_header_token Cache-Control "s-maxage=$hashed_s_maxage" 'hashed fixture'
-assert_header_token Vary Accept-Encoding 'hashed fixture'
+assert_vary "$vary_mode" 'hashed fixture'
 etag=$(header_value ETag)
 [ -n "$etag" ] || fail 'hashed fixture is missing ETag'
 : > "$headers"
@@ -199,12 +243,12 @@ etag=$(header_value ETag)
 status=$(curl -sS --connect-timeout 5 --max-time 15 -D "$headers" -o "$body" -w '%{http_code}' -H "If-None-Match: $etag" "$origin$hashed") ||
   fail 'conditional hashed request failed'
 assert_status 304 'conditional hashed fixture'
-pass 'hashed cache policy, ETag, Vary, and conditional 304'
+pass 'hashed cache policy, ETag, conditional Vary, and conditional 304'
 
 fetch_head "$html"
 assert_status 200 'HTML fixture'
 assert_one_header Cache-Control 'HTML fixture'
-assert_one_header Vary 'HTML fixture'
+assert_vary "$vary_mode" 'HTML fixture'
 assert_header_token Cache-Control "max-age=$html_max_age" 'HTML fixture'
 assert_header_token Cache-Control must-revalidate 'HTML fixture'
 assert_header_token Cache-Control "s-maxage=$html_s_maxage" 'HTML fixture'
@@ -213,21 +257,21 @@ pass 'HTML revalidation policy'
 fetch_head "$json"
 assert_status 200 'JSON fixture'
 assert_one_header Cache-Control 'JSON fixture'
-assert_one_header Vary 'JSON fixture'
+assert_vary "$vary_mode" 'JSON fixture'
 assert_header_token Cache-Control "max-age=$json_max_age" 'JSON fixture'
 pass 'JSON/manifest short-cache policy'
 
 fetch_head "$service_worker"
 assert_status 200 'service-worker fixture'
 assert_one_header Cache-Control 'service-worker fixture'
-assert_one_header Vary 'service-worker fixture'
+assert_vary "$vary_mode" 'service-worker fixture'
 assert_header_token Cache-Control no-cache 'service-worker fixture'
 pass 'service-worker revalidation policy'
 
 fetch_head "$missing"
 assert_status 404 'missing fixture'
 assert_one_header Cache-Control 'missing fixture'
-assert_one_header Vary 'missing fixture'
+assert_vary "$vary_mode" 'missing fixture'
 assert_header_token Cache-Control no-store 'missing fixture'
 pass '404 no-store policy'
 
@@ -235,10 +279,22 @@ if [ -n "$image" ]; then
   fetch_head "$image" -H 'Accept: image/webp'
   assert_status 200 'image fixture'
   assert_one_header Cache-Control 'image fixture'
-  assert_one_header Vary 'image fixture'
-  assert_header_token Vary Accept 'image fixture'
-  assert_header_token Vary Accept-Encoding 'image fixture'
-  pass 'image representation Vary policy'
+  assert_header_token Cache-Control "max-age=$image_max_age" 'image fixture'
+  assert_header_token Cache-Control "s-maxage=$image_s_maxage" 'image fixture'
+  assert_header_token Cache-Control must-revalidate 'image fixture'
+  assert_vary "$image_vary_mode" 'image fixture'
+  pass 'image cache and representation Vary policy'
 fi
+
+probe=1
+while [ "$probe" -le "$edge_probes" ]; do
+  fetch_head "$hashed"
+  x_cache=$(header_value X-Cache)
+  age=$(header_value Age)
+  printf 'verify-origin.sh: EDGE probe=%s status=%s x-cache=%s age=%s\n' \
+    "$probe" "$status" "${x_cache:-absent}" "${age:-absent}"
+  probe=$((probe + 1))
+done
+[ "$edge_probes" -eq 0 ] || pass 'edge probes completed; MISS alone does not prove storage'
 
 echo 'verify-origin.sh: all checks passed'

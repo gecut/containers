@@ -93,7 +93,8 @@ SPA inherits the CDN policy without adding a second cache authority:
 
 | Content or outcome | Default `Cache-Control` |
 | --- | --- |
-| Fingerprinted asset | `public, max-age=31536000, immutable, s-maxage=31536000` |
+| Fingerprinted non-image asset | `public, max-age=31536000, immutable, s-maxage=31536000` |
+| Image with any supported filename | `public, max-age=0, must-revalidate, s-maxage=86400` |
 | Unversioned static file | `public, max-age=3600, stale-while-revalidate=30` |
 | `.html` shell | `public, max-age=0, must-revalidate, s-maxage=0` |
 | Extensionless deep route that falls back to an `.html` shell | HTML shell policy after internal redirect |
@@ -101,9 +102,11 @@ SPA inherits the CDN policy without adding a second cache authority:
 | `service-worker.js` or `sw.js` | `no-cache` |
 | Any `4xx` or `5xx`, including a missing asset | `no-store` |
 | Any method other than `GET` or `HEAD` | `no-store` |
+| Any request with `Authorization` | `private, no-store` |
 
-ETags are enabled. All responses vary on `Accept-Encoding`; JPEG and PNG URIs
-also vary on `Accept` for optional WebP sidecars.
+ETags are enabled. Responses vary on `Accept-Encoding` only when gzip or
+gzip-static is active; JPEG and PNG URIs add `Accept` only when optional WebP
+selection is active.
 
 > [!WARNING]
 > A shell URI without `.htm` or `.html`, for example `/app-shell`, is classified
@@ -111,11 +114,9 @@ also vary on `Accept` for optional WebP sidecars.
 > one-hour default policy. Prefer an `.html` shell name or replace the CDN cache
 > classification map deliberately.
 
-The CDN hash matchers run before service-worker, HTML, and JSON matchers. Use
-content-addressed asset names; a human-readable hyphenated token of eight or
-more characters can be misclassified as immutable. See the
-[CDN cache details](../cdn/README.md#cache-behavior) before changing filename or
-cache conventions.
+The inherited CDN classifier places images in an explicit mutable-safe profile
+regardless of filename. Immutable caching for non-image build assets still
+requires content-addressed names.
 
 ## Quick start
 
@@ -274,6 +275,8 @@ Empty means an empty string. Stage `19` validates environment shape and stage
 | --- | --- | --- |
 | `NGINX_CDN_CACHE_HASHED` | `public, max-age=31536000, immutable` | Base fingerprinted-file policy; no controls, quotes, apostrophes, or backslashes |
 | `NGINX_CDN_S_MAXAGE` | `31536000` | Unsigned integer appended to the hashed policy |
+| `NGINX_CDN_CACHE_IMAGE` | `public, max-age=0, must-revalidate` | Base image policy, independent of filename |
+| `NGINX_CDN_IMAGE_S_MAXAGE` | `86400` | Unsigned integer appended to the image policy |
 | `NGINX_CDN_CACHE_UNVERSIONED_STATIC` | `public, max-age=3600, stale-while-revalidate=30` | Default URI policy; same safe-text validation |
 | `NGINX_CDN_CACHE_HTML` | `public, max-age=0, must-revalidate` | Base HTML policy; same safe-text validation |
 | `NGINX_CDN_HTML_S_MAXAGE` | `0` | Unsigned integer appended to the HTML policy |
@@ -319,13 +322,14 @@ Empty means an empty string. Stage `19` validates environment shape and stage
 | `NGINX_TCP_NOPUSH` | `on` | `on` or `off` |
 | `NGINX_TCP_NODELAY` | `on` | `on` or `off` |
 | `NGINX_OPEN_FILE_CACHE` | `max=1000 inactive=30m` | Directive arguments; `;`, `{`, and `}` are rejected |
-| `NGINX_OPEN_FILE_CACHE_VALID` | `30s` | NGINX time |
+| `NGINX_OPEN_FILE_CACHE_VALID` | `1s` | NGINX time inherited from CDN |
 | `NGINX_OPEN_FILE_CACHE_MIN_USES` | `2` | Unsigned integer |
+| `NGINX_OPEN_FILE_CACHE_ERRORS` | `off` | Negative lookup caching inherited from CDN |
 | `NGINX_KEEPALIVE_TIMEOUT` | `65` | NGINX time |
 | `NGINX_KEEPALIVE_REQUESTS` | `1000` | Unsigned integer |
 | `NGINX_GZIP` | `on` | `on` or `off` |
 | `NGINX_GZIP_STATIC` | `on` | `on` or `off`; serves precompressed `.gz` files |
-| `NGINX_GZIP_VARY` | `off` | `on` or `off`; CDN already emits `Vary: Accept-Encoding` |
+| `NGINX_GZIP_VARY` | `off` | Keep off because CDN owns conditional Vary |
 | `NGINX_GZIP_COMP_LEVEL` | `5` | Integer `1`–`9` |
 | `NGINX_GZIP_MIN_LENGTH` | `256` | Unsigned byte count |
 | `NGINX_EXPIRES_DYNAMIC` | `off` | Safe NGINX `expires` value; keep `off` to avoid duplicate cache authority |
@@ -443,8 +447,8 @@ with `nginx -T` and runtime probes.
 - `NGINX_DISALLOW_ROBOTS=on` preserves a consumer-provided policy. If it must
   create or replace `robots.txt`, a read-only root causes startup failure at
   stage `40`.
-- Open-file lookup errors are cached. Prefer immutable deployments; tune
-  `NGINX_OPEN_FILE_CACHE_VALID` when mutating a mounted build in place.
+- Open-file lookup errors are not cached and metadata is revalidated after
+  `1s`; immutable deployments may opt into longer caching.
 - Setting `NGINX_RESOLVERS` only supports custom downstream directives that
   need runtime DNS. It does not enable proxying.
 

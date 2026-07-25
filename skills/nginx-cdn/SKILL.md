@@ -47,7 +47,7 @@ Each reference is standalone. Load more than one when the change crosses concern
 4. **Preserve single header authority.** Keep CDN `Cache-Control` and `Vary` maps authoritative. Do not add a second `add_header Cache-Control`, enable inherited `expires`, or turn gzip-generated `Vary` back on without proving that duplicates cannot occur.
 5. **Pin inputs.** Use exact image tag `2.0.0` in copy-ready examples. For a production release, let the consumer additionally pin the resolved digest through their own update process.
 6. **Validate startup configuration.** Exercise the actual entrypoint, not only `nginx -t` against unrendered templates. Invalid environment values, generated configuration, or template syntax must stop the container.
-7. **Verify externally visible behavior.** Check status, one Cache-Control field, one Vary field, ETag/304 behavior, 404 `no-store`, and every customized content class. Use [scripts/verify-origin.sh](scripts/verify-origin.sh) when fixtures are available; resolve its command path from this installed `SKILL.md`, not from a repository-relative assumption.
+7. **Verify externally visible behavior.** Check status, one Cache-Control field, zero or one policy-driven Vary field, ETag/304 behavior, 404 `no-store`, and every customized content class. Use [scripts/verify-origin.sh](scripts/verify-origin.sh) when fixtures are available; resolve its command path from this installed `SKILL.md`, not from a repository-relative assumption.
 8. **Report limitations.** State that origin headers do not prove a downstream CDN honors them. Call out untested CDN-provider behavior, absent Docker/Kubernetes access, and any route class without a real fixture.
 
 ## Non-negotiable invariants
@@ -58,7 +58,8 @@ Each reference is standalone. Load more than one when the change crosses concern
 - Keep HTML revalidating unless the user explicitly owns a safe release/invalidation strategy.
 - Keep `NGINX_EXPIRES_DYNAMIC`, `NGINX_EXPIRES_STATIC`, and `NGINX_EXPIRES_DEFAULT` at `off` in this layer.
 - Cache environment variables change policy values only; they cannot change URI classification or filename matching.
-- Preserve `Vary: Accept-Encoding`; preserve `Accept` for JPEG/PNG when WebP negotiation is enabled.
+- Emit `Accept-Encoding` only when gzip or gzip-static can vary bytes; emit
+  `Accept` for JPEG/PNG only when WebP negotiation is enabled.
 - Never trust forwarded client IP headers without explicit trusted proxy CIDRs.
 - Do not claim Brotli, TLS, reverse proxying, on-disk caching, purge APIs, range-cache logic, or SPA fallback; this image does not provide them.
 

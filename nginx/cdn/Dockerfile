@@ -12,8 +12,9 @@ ENV NGINX_CLIENT_MAX_BODY_SIZE=1k \
     NGINX_TCP_NOPUSH=on \
     NGINX_TCP_NODELAY=on \
     NGINX_OPEN_FILE_CACHE="max=1000 inactive=30m" \
-    NGINX_OPEN_FILE_CACHE_VALID=30s \
+    NGINX_OPEN_FILE_CACHE_VALID=1s \
     NGINX_OPEN_FILE_CACHE_MIN_USES=2 \
+    NGINX_OPEN_FILE_CACHE_ERRORS=off \
     NGINX_EXPIRES_DYNAMIC=off \
     NGINX_EXPIRES_STATIC=off \
     NGINX_EXPIRES_DEFAULT=off \
@@ -26,8 +27,10 @@ ENV NGINX_CLIENT_MAX_BODY_SIZE=1k \
     NGINX_GZIP_MIN_LENGTH=256 \
     NGINX_DISABLE_SYMLINKS=off \
     NGINX_CDN_S_MAXAGE=31536000 \
+    NGINX_CDN_IMAGE_S_MAXAGE=86400 \
     NGINX_CDN_HTML_S_MAXAGE=0 \
     NGINX_CDN_CACHE_HASHED="public, max-age=31536000, immutable" \
+    NGINX_CDN_CACHE_IMAGE="public, max-age=0, must-revalidate" \
     NGINX_CDN_CACHE_UNVERSIONED_STATIC="public, max-age=3600, stale-while-revalidate=30" \
     NGINX_CDN_CACHE_HTML="public, max-age=0, must-revalidate" \
     NGINX_CDN_CACHE_JSON="public, max-age=60, stale-while-revalidate=30" \

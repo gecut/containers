@@ -32,6 +32,21 @@ expected_parents.each do |id, parent|
   end
 end
 
+expected_parents.each_key do |id|
+  image = by_id.fetch(id)
+  raise "#{id} exact SemVer tag must be moving" unless image.dig("compatibility", "exact_semver_tags") == "moving_repointable_aliases"
+  raise "#{id} SHA tag must be moving" unless image.dig("compatibility", "sha_tags") == "moving_repointable_aliases"
+  raise "#{id} digest reference must be immutable" unless image.dig("compatibility", "digest_references") == "immutable_pullable"
+  raise "#{id} exact SemVer missing from moving tags" unless image.fetch("tag_policy").fetch("moving").include?("exact-semver")
+  raise "#{id} SHA missing from moving tags" unless image.fetch("tag_policy").fetch("moving").include?("sha")
+end
+
+%w[nextjs-base nextjs-prisma nextjs-payload].each do |id|
+  image = by_id.fetch(id)
+  raise "#{id} exact SemVer policy changed" unless image.dig("compatibility", "exact_semver_tags") == "immutable_pullable"
+  raise "#{id} SHA policy changed" unless image.dig("compatibility", "sha_tags") == "immutable_pullable"
+end
+
 expected_versions = {
   "nginx-base" => "2.0.0",
   "nginx-core" => "2.0.0",

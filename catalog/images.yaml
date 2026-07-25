@@ -30,6 +30,19 @@ compatibility_policy: &compatibility_policy
   parent_change_requires_child_release: true
   alias_digest_alignment: active_aliases_resolve_to_target_release_digest
   frozen_and_archived: no_compatibility_evolution_or_security_maintenance_commitment
+nginx_compatibility_policy: &nginx_compatibility_policy
+  reference: docs/architecture/image-catalog.md#compatibility-contract
+  exact_semver_tags: moving_repointable_aliases
+  sha_tags: moving_repointable_aliases
+  major_minor_latest_tags: moving_repointable_aliases
+  digest_references: immutable_pullable
+  breaking_changes: major
+  backward_compatible_capabilities: minor
+  backward_compatible_fixes: patch
+  independent_versioning: true
+  parent_change_requires_child_release: true
+  alias_digest_alignment: active_aliases_resolve_to_target_release_digest
+  frozen_and_archived: no_compatibility_evolution_or_security_maintenance_commitment
 tag_policy: &tag_policy
   reference: docs/architecture/image-catalog.md#tag-policy
   immutable:
@@ -39,6 +52,17 @@ tag_policy: &tag_policy
     - major
     - minor
     - latest
+  archived_tags: must_not_be_reused_or_repointed
+nginx_tag_policy: &nginx_tag_policy
+  reference: docs/architecture/image-catalog.md#tag-policy
+  moving:
+    - exact-semver
+    - sha
+    - major
+    - minor
+    - latest
+  immutable:
+    - digest-reference
   archived_tags: must_not_be_reused_or_repointed
 registries:
   ghcr:
@@ -68,8 +92,8 @@ active_images:
     aliases: []
     documentation_target: nginx/base/README.md
     consumer_skill_target: skills/nginx/base
-    compatibility: *compatibility_policy
-    tag_policy: *tag_policy
+    compatibility: *nginx_compatibility_policy
+    tag_policy: *nginx_tag_policy
   - id: nginx-core
     family: nginx
     variant: core
@@ -87,8 +111,8 @@ active_images:
     aliases: []
     documentation_target: nginx/core/README.md
     consumer_skill_target: skills/nginx/core
-    compatibility: *compatibility_policy
-    tag_policy: *tag_policy
+    compatibility: *nginx_compatibility_policy
+    tag_policy: *nginx_tag_policy
   - id: nginx-cdn
     family: nginx
     variant: cdn
@@ -106,8 +130,8 @@ active_images:
     aliases: []
     documentation_target: nginx/cdn/README.md
     consumer_skill_target: skills/nginx-cdn
-    compatibility: *compatibility_policy
-    tag_policy: *tag_policy
+    compatibility: *nginx_compatibility_policy
+    tag_policy: *nginx_tag_policy
   - id: nginx-spa
     family: nginx
     variant: spa
@@ -125,8 +149,8 @@ active_images:
     aliases: []
     documentation_target: nginx/spa/README.md
     consumer_skill_target: skills/nginx-spa
-    compatibility: *compatibility_policy
-    tag_policy: *tag_policy
+    compatibility: *nginx_compatibility_policy
+    tag_policy: *nginx_tag_policy
   - id: nextjs-base
     family: nextjs
     variant: base

@@ -212,48 +212,10 @@ jobs:
             cosign sign --yes "$image"
           done
 
-      - name: Preflight immutable SHA tags
+      - name: Promote all NGINX tags
         run: |
           set -euo pipefail
-          validate_version() {
-            version=$1
-            if [[ ! "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-              echo >&2 "$version is not a valid major.minor.patch version"
-              exit 1
-            fi
-          }
-          validate_version "$NGINX_BASE_VERSION"
-          validate_version "$NGINX_CORE_VERSION"
-          validate_version "$NGINX_CDN_VERSION"
-          validate_version "$NGINX_SPA_VERSION"
-
-          resolve_digest() {
-            docker buildx imagetools inspect "$1" | awk '$1 == "Digest:" && digest == "" { digest=$2 } END { if (digest == "") exit 1; print digest }'
-          }
-
-          sha_tag="sha-${GITHUB_SHA::12}"
-          for pair in \
-            "$BASE_DIGEST_REF|$REGISTRY/$REGISTRY_USER/nginx/base:$sha_tag" \
-            "$CORE_DIGEST_REF|$REGISTRY/$REGISTRY_USER/nginx/core:$sha_tag" \
-            "$CDN_DIGEST_REF|$REGISTRY/$REGISTRY_USER/nginx/cdn:$sha_tag" \
-            "$SPA_DIGEST_REF|$REGISTRY/$REGISTRY_USER/nginx/spa:$sha_tag"; do
-            source=${pair%%|*}
-            reference=${pair#*|}
-            if actual=$(resolve_digest "$reference" 2>/dev/null); then
-              expected=${source##*@}
-              if [ "$actual" != "$expected" ]; then
-                echo >&2 "$reference already exists with $actual, expected immutable digest $expected"
-                exit 1
-              fi
-              echo "$reference already points to the candidate digest"
-            fi
-          done
-          echo 'Existing version tags will be replaced; SHA tags remain immutable'
-
-      - name: Promote version tags
-        run: |
-          set -euo pipefail
-          promote_version() {
+          promote_image() {
             source=$1
             repository=$2
             version=$3
@@ -264,25 +226,19 @@ jobs:
             major_tag=${version%%.*}
             minor_tag=${version%.*}
             patch_tag=$version
+            sha_tag="sha-${GITHUB_SHA::12}"
             docker buildx imagetools create \
               -t "$repository:$patch_tag" \
               -t "$repository:$minor_tag" \
               -t "$repository:$major_tag" \
+              -t "$repository:$sha_tag" \
+              -t "$repository:latest" \
               "$source"
           }
-          promote_version "$BASE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/base" "$NGINX_BASE_VERSION"
-          promote_version "$CORE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/core" "$NGINX_CORE_VERSION"
-          promote_version "$CDN_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/cdn" "$NGINX_CDN_VERSION"
-          promote_version "$SPA_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/spa" "$NGINX_SPA_VERSION"
-
-      - name: Promote SHA and latest tags
-        run: |
-          set -euo pipefail
-          sha_tag="sha-${GITHUB_SHA::12}"
-          docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/base:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/base:latest" "$BASE_TEMP"
-          docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/core:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/core:latest" "$CORE_TEMP"
-          docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/cdn:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/cdn:latest" "$CDN_TEMP"
-          docker buildx imagetools create -t "$REGISTRY/$REGISTRY_USER/nginx/spa:$sha_tag" -t "$REGISTRY/$REGISTRY_USER/nginx/spa:latest" "$SPA_TEMP"
+          promote_image "$BASE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/base" "$NGINX_BASE_VERSION"
+          promote_image "$CORE_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/core" "$NGINX_CORE_VERSION"
+          promote_image "$CDN_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/cdn" "$NGINX_CDN_VERSION"
+          promote_image "$SPA_TEMP" "$REGISTRY/$REGISTRY_USER/nginx/spa" "$NGINX_SPA_VERSION"
 
       - name: Verify promoted digests
         run: |
