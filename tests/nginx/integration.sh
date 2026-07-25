@@ -216,6 +216,8 @@ webp_vary_port=$STARTED_PORT
 assert_no_header "http://127.0.0.1:$webp_vary_port/app-C6uTJdX2.js" Vary
 webp_vary=$(curl -sSI -H 'Accept: image/webp' "http://127.0.0.1:$webp_vary_port/photo.jpg" | sed -n 's/^Vary: //Ip' | tr -d '\r')
 [ "$webp_vary" = "Accept" ] || fail "WebP-only Vary was '$webp_vary', expected Accept"
+webp_query_vary=$(curl -sSI -H 'Accept: image/webp' "http://127.0.0.1:$webp_vary_port/photo.jpg?version=1" | sed -n 's/^Vary: //Ip' | tr -d '\r')
+[ "$webp_query_vary" = "Accept" ] || fail "WebP query-string Vary was '$webp_query_vary', expected Accept"
 
 start nginx-cdn-both-vary-test "$NGINX_CDN_IMAGE" \
   -e NGINX_AUTO_WEBP=on -v "$WORK/cdn:/data:ro"

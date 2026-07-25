@@ -20,7 +20,7 @@ grep -q 'NGINX_OPEN_FILE_CACHE_ERRORS=off' "$ROOT/nginx/cdn/Dockerfile"
 grep -q 'NGINX_OPEN_FILE_CACHE_VALID=1s' "$ROOT/nginx/cdn/Dockerfile"
 grep -Fq "map \$http_authorization \$cdn_cache_control" "$ROOT/nginx/cdn/etc/nginx/templates/http.d/82-cache-policy-map.conf.template"
 grep -q 'private, no-store' "$ROOT/nginx/cdn/etc/nginx/templates/http.d/82-cache-policy-map.conf.template"
-grep -Fq "NGINX_AUTO_WEBP:\$uri" "$ROOT/nginx/cdn/etc/nginx/templates/http.d/81-vary-map.conf.template"
+grep -Fq "NGINX_AUTO_WEBP:\$request_uri" "$ROOT/nginx/cdn/etc/nginx/templates/http.d/81-vary-map.conf.template"
 
 for variable in NGINX_BASE_VERSION NGINX_CORE_VERSION NGINX_CDN_VERSION NGINX_SPA_VERSION; do
   version=$(sed -n "s/^[[:space:]]*$variable:[[:space:]]*//p" "$ROOT/.github/workflows/publish-container.yml")
