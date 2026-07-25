@@ -280,7 +280,8 @@ jobs:
 
   nextjs-publish:
     needs: changes
-    if: needs.changes.outputs.nextjs == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: false
+    # if: needs.changes.outputs.nextjs == 'true' || github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
