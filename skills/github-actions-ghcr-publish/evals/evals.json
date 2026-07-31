@@ -1,0 +1,53 @@
+{
+  "skill_name": "github-actions-ghcr-publish",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Audit /Users/mm25zamanian/Codes/rasta-company.com/.github/workflows/deploy-image.yml. Convert it to the standard single-image policy: PR validation without push, default-branch/manual publish, lowercase GHCR name, GHA cache, SemVer action refs without SHAs, provenance and SBOM.",
+      "expected_output": "A corrected single-image workflow and a concise explanation of event, permissions, login, tags, cache, and duplicate-build behavior.",
+      "files": ["/Users/mm25zamanian/Codes/rasta-company.com/.github/workflows/deploy-image.yml"],
+      "assertions": [
+        "PR execution does not log in or push while default-branch/manual execution can publish.",
+        "Uses complete SemVer action references without SHA or major-only syntax.",
+        "Uses lowercase GHCR naming, Buildx, GHA cache, commit/latest tags, provenance, and SBOM.",
+        "Does not introduce a second production application build when the Dockerfile owns it."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Analyze /Users/mm25zamanian/Codes/fara-list/.github/workflows/deploy-image.yml and /Users/mm25zamanian/Codes/gecut.ir/.github/workflows/deploy.yml. Show how the single-image skill should remove duplicated app builds while retaining lint/typecheck validation and safe GHCR publishing.",
+      "expected_output": "A comparison and normalized workflow pattern that keeps checks but makes Dockerfile build the production source of truth.",
+      "files": ["/Users/mm25zamanian/Codes/fara-list/.github/workflows/deploy-image.yml","/Users/mm25zamanian/Codes/gecut.ir/.github/workflows/deploy.yml"],
+      "assertions": [
+        "Finds the application build in both workflows and explains the duplication with the Dockerfiles.",
+        "Keeps independent lint/typecheck checks when available but removes redundant production artifact generation.",
+        "Uses PR no-push and authorized publish conditions with scoped permissions.",
+        "Uses SemVer-only action/tool references and exact cache/tag expectations."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Review /Users/mm25zamanian/Codes/containers/.github/workflows/publish-container.yml as a multi-image GHCR pipeline. Explain the dependency closure, candidate tags, integration tests, scan/sign/promote sequence, and digest verification, while documenting the SemVer-only reference policy.",
+      "expected_output": "A complete multi-image pipeline review that preserves gate ordering and identifies any policy deviations.",
+      "files": ["/Users/mm25zamanian/Codes/containers/.github/workflows/publish-container.yml"],
+      "assertions": [
+        "Recognizes the dependency order base -> core -> cdn -> spa and candidate image handoff.",
+        "Preserves integration testing before scan/sign/promotion and verifies promoted aliases against candidate digests.",
+        "Explains permissions, QEMU/Buildx, cache, non-cancelable promotion concurrency, and registry login.",
+        "Distinguishes image provenance SHA tags from forbidden SHA-pinned action/tool references."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Create a release-ready GitHub Actions workflow for three dependency-ordered images published to GHCR. Pull requests must validate without push; main/manual must build multi-platform candidates, test, scan HIGH/CRITICAL vulnerabilities, sign, promote SemVer aliases plus latest, and verify every alias.",
+      "expected_output": "A complete multi-image workflow with safe conditions, exact action/tool versions, and promotion gates.",
+      "files": [],
+      "assertions": [
+        "Builds images in dependency order with unique candidate tags and multi-platform manifests.",
+        "Does not push or login from pull requests and scopes permissions to required jobs.",
+        "Runs integration, vulnerability scan, signing, promotion, and alias digest verification in that order.",
+        "Uses SemVer-only dependency/action/tool references and preserves commit/latest image metadata policy."
+      ]
+    }
+  ]
+}

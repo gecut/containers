@@ -1,0 +1,175 @@
+name: Build, test, and publish image closure
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: image-closure-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_OWNER: ${{ github.repository_owner }}
+  BASE_VERSION: 1.0.0
+  LEAF_VERSION: 1.0.0
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4.2.0
+
+      - name: Build dependency closure without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx build --load -t local/base:test \
+            --build-arg BUILD_VERSION="$BASE_VERSION" base
+          docker buildx build --load -t local/leaf:test \
+            --build-arg BASE_IMAGE=local/base:test \
+            --build-arg BUILD_VERSION="$LEAF_VERSION" leaf
+
+  publish:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    concurrency:
+      group: image-closure-promotion
+      cancel-in-progress: false
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@7.0.1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@3.6.0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4.2.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ env.IMAGE_OWNER }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build candidate closure
+        shell: bash
+        run: |
+          set -euo pipefail
+          suffix="candidate-${GITHUB_SHA::12}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          base="${REGISTRY}/${IMAGE_OWNER}/base:${suffix}"
+          leaf="${REGISTRY}/${IMAGE_OWNER}/leaf:${suffix}"
+          docker buildx build --platform linux/amd64,linux/arm64 --push \
+            --sbom=true --provenance=mode=max -t "$base" \
+            --cache-from type=gha --cache-to type=gha,mode=max \
+            --build-arg BUILD_VERSION="$BASE_VERSION" base
+          docker buildx build --platform linux/amd64,linux/arm64 --push \
+            --sbom=true --provenance=mode=max -t "$leaf" \
+            --cache-from type=gha --cache-to type=gha,mode=max \
+            --build-arg BASE_IMAGE="$base" \
+            --build-arg BUILD_VERSION="$LEAF_VERSION" leaf
+          printf 'BASE_TEMP=%s\nLEAF_TEMP=%s\n' "$base" "$leaf" >> "$GITHUB_ENV"
+          for pair in "BASE:$base" "LEAF:$leaf"; do
+            name=${pair%%:*}
+            image=${pair#*:}
+            digest=$(docker buildx imagetools inspect "$image" | awk '$1 == "Digest:" && digest == "" { digest=$2 } END { if (digest == "") exit 1; print digest }')
+            printf '%s_DIGEST_REF=%s@%s\n' "$name" "${image%:*}" "$digest" >> "$GITHUB_ENV"
+          done
+
+      - name: Run integration tests
+        env:
+          BASE_IMAGE: ${{ env.BASE_DIGEST_REF }}
+          LEAF_IMAGE: ${{ env.LEAF_DIGEST_REF }}
+        run: ./tests/integration.sh
+
+      - name: Scan candidate images
+        shell: bash
+        run: |
+          set -euo pipefail
+          for image in "$BASE_DIGEST_REF" "$LEAF_DIGEST_REF"; do
+            docker run --rm \
+              --volume "$HOME/.docker:/root/.docker:ro" \
+              docker.io/aquasec/trivy:0.67.2 \
+              image --scanners vuln --exit-code 1 --exit-on-eol 1 \
+              --severity HIGH,CRITICAL "$image"
+          done
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@4.1.2
+        with:
+          cosign-release: v2.4.3
+
+      - name: Sign candidate digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosign sign --yes "$BASE_DIGEST_REF"
+          cosign sign --yes "$LEAF_DIGEST_REF"
+
+      - name: Promote and verify aliases
+        shell: bash
+        run: |
+          set -euo pipefail
+          promote_image() {
+            source=$1
+            repository=$2
+            version=$3
+            printf '%s\n' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' || {
+              echo >&2 "invalid major.minor.patch version: $version"
+              exit 1
+            }
+            major=${version%%.*}
+            minor=${version%.*}
+            minor=${minor%.*}
+            sha_tag="sha-${GITHUB_SHA::12}"
+            docker buildx imagetools create \
+              -t "$repository:$version" \
+              -t "$repository:$minor" \
+              -t "$repository:$major" \
+              -t "$repository:$sha_tag" \
+              -t "$repository:latest" "$source"
+          }
+          assert_digest() {
+            expected_ref=$1
+            promoted_ref=$2
+            expected=${expected_ref##*@}
+            actual=$(docker buildx imagetools inspect "$promoted_ref" | awk '$1 == "Digest:" && digest == "" { digest=$2 } END { if (digest == "") exit 1; print digest }')
+            test "$actual" = "$expected" || {
+              echo >&2 "$promoted_ref resolved to $actual, expected $expected"
+              exit 1
+            }
+          }
+          verify_aliases() {
+            digest_ref=$1
+            repository=$2
+            version=$3
+            major=${version%%.*}
+            minor=${version%.*}
+            minor=${minor%.*}
+            assert_digest "$digest_ref" "$repository:$version"
+            assert_digest "$digest_ref" "$repository:$minor"
+            assert_digest "$digest_ref" "$repository:$major"
+            assert_digest "$digest_ref" "$repository:sha-${GITHUB_SHA::12}"
+            assert_digest "$digest_ref" "$repository:latest"
+          }
+          promote_image "$BASE_TEMP" "$REGISTRY/$IMAGE_OWNER/base" "$BASE_VERSION"
+          promote_image "$LEAF_TEMP" "$REGISTRY/$IMAGE_OWNER/leaf" "$LEAF_VERSION"
+          verify_aliases "$BASE_DIGEST_REF" "$REGISTRY/$IMAGE_OWNER/base" "$BASE_VERSION"
+          verify_aliases "$LEAF_DIGEST_REF" "$REGISTRY/$IMAGE_OWNER/leaf" "$LEAF_VERSION"

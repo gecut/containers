@@ -1,0 +1,22 @@
+[
+  {"query":"Review our Dockerfile that builds a Vite site and serves dist/ from ghcr.io/gecut/nginx/cdn. Set short cache, gzip off, and verify the final image.","should_trigger":true},
+  {"query":"Create a multi-stage pnpm Dockerfile whose final stage is the current Gecut nginx CDN image.","should_trigger":true},
+  {"query":"Our Dockerfile uses ghcr.io/gecut/nginx:0.0.0-cdn and long expires. Migrate it to the current contract.","should_trigger":true},
+  {"query":"Audit whether our workflow duplicates the build already performed by the static-site Dockerfile.","should_trigger":true},
+  {"query":"Set nginx-cdn environment defaults for HTML, JSON, images, service workers, errors, gzip, and expires in the final Docker stage.","should_trigger":true},
+  {"query":"Give me a Dockerfile healthcheck strategy for a static Gecut nginx origin using its server-info contract.","should_trigger":true},
+  {"query":"Our React app needs history fallback in NGINX. Decide whether the Dockerfile should use nginx-cdn or nginx-spa.","should_trigger":true},
+  {"query":"Check our static Dockerfile for latest tags, digest references, root-owned files, bad COPY ordering, and missing artifact ownership.","should_trigger":true},
+  {"query":"Write a production Dockerfile for a pnpm static export with BuildKit package-store caching and no Node runtime in the final image.","should_trigger":true},
+  {"query":"Explain how to verify a downstream nginx-cdn Dockerfile with Hadolint, docker build, nginx configuration inspection, and origin curl checks.","should_trigger":true},
+  {"query":"Deploy Next.js SSR and API routes behind a reverse proxy with proxy_cache and TLS.","should_trigger":false},
+  {"query":"Fix a React component unit test and its Vitest mocks.","should_trigger":false},
+  {"query":"Create a generic Ubuntu NGINX reverse-proxy configuration for WebSockets.","should_trigger":false},
+  {"query":"Write Terraform for CloudFront invalidations and Origin Access Control.","should_trigger":false},
+  {"query":"Design a Workbox service-worker precaching strategy.","should_trigger":false},
+  {"query":"Tune Linux kernel limits for a file download server.","should_trigger":false},
+  {"query":"Write a Dockerfile for a Go API that runs as a server process.","should_trigger":false},
+  {"query":"Configure cert-manager and ingress-nginx for wildcard TLS.","should_trigger":false},
+  {"query":"Optimize a Python package installation layer in a data-science Dockerfile.","should_trigger":false},
+  {"query":"Review browser caching theory and RFC 9111 terminology.","should_trigger":false}
+]

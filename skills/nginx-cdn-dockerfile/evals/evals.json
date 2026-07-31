@@ -1,0 +1,53 @@
+{
+  "skill_name": "nginx-cdn-dockerfile",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review /Users/mm25zamanian/Codes/rasta-company.com/Dockerfile and produce a best-practice nginx-cdn Dockerfile. Keep the static build inside Docker, use the latest compatible SemVer versions without digests, set five-minute cache defaults, disable compression, and explain the health contract.",
+      "expected_output": "A multi-stage Dockerfile review that preserves the static Next export, uses nginx-cdn, applies the requested runtime policy, and identifies validation commands.",
+      "files": ["/Users/mm25zamanian/Codes/rasta-company.com/Dockerfile"],
+      "assertions": [
+        "Keeps the application build in the Dockerfile and does not add a duplicate workflow artifact build.",
+        "Uses a full SemVer nginx-cdn tag without latest or digest syntax.",
+        "Sets five-minute cache policy including hashed assets, gzip off, expires off, service-worker no-cache, and error no-store.",
+        "Explains /server-info or inherited health behavior and gives build plus origin verification commands."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Audit /Users/mm25zamanian/Codes/fara-list/Dockerfile. Decide whether nginx-cdn or nginx-spa fits the Vite application, identify the duplicated build risk with its deploy workflow, and propose the smallest safe Dockerfile structure.",
+      "expected_output": "A routing decision that keeps SPA fallback on nginx-spa, identifies duplicate application builds, and proposes a reproducible multi-stage structure.",
+      "files": ["/Users/mm25zamanian/Codes/fara-list/Dockerfile"],
+      "assertions": [
+        "Recognizes client-side routing and selects or retains nginx-spa rather than weakening nginx-cdn 404 behavior.",
+        "Identifies that the workflow and Dockerfile both build the application.",
+        "Preserves SemVer-only image and package references without latest or digest syntax.",
+        "Reports project-specific environment and verification assumptions instead of inventing unsupported variables."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Modernize /Users/mm25zamanian/Codes/gecut.ir/Dockerfile for the current nginx-cdn consumer contract. Detect the legacy image name, remove unsafe long cache and compression settings, and return an implementation-ready review.",
+      "expected_output": "A migration-focused review that replaces the legacy image reference and restores the controlled short-cache, compression-off runtime policy.",
+      "files": ["/Users/mm25zamanian/Codes/gecut.ir/Dockerfile"],
+      "assertions": [
+        "Flags ghcr.io/gecut/nginx:0.0.0-cdn as legacy and selects a SemVer nginx-cdn image.",
+        "Removes or replaces long-lived expires/cache settings and turns gzip and gzip Vary off.",
+        "Keeps static artifact ownership correct and does not add a Node runtime to the final stage.",
+        "Includes a health, build, NGINX configuration, and origin smoke verification path."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Write a production Dockerfile for a pnpm static site with a dist/ output on ghcr.io/gecut/nginx/cdn. Use a cache-efficient multi-stage build, latest compatible stable SemVer dependencies without SHAs, short cache defaults, disabled compression, and a basic health contract.",
+      "expected_output": "A complete Dockerfile plus concise rationale and verification checklist.",
+      "files": [],
+      "assertions": [
+        "Uses manifest-first dependency caching, frozen lockfile installation, and a separate builder stage.",
+        "Copies only dist/ into /data with nginx ownership and uses a SemVer nginx-cdn final image.",
+        "Disables gzip and expires, sets short cache defaults, and preserves service-worker/error safety.",
+        "Does not use latest, digest syntax, unsupported variables, or an unnecessary runtime server."
+      ]
+    }
+  ]
+}

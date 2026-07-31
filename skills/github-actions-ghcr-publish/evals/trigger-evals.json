@@ -1,0 +1,22 @@
+[
+  {"query":"Review our GitHub Actions workflow that builds and pushes one Docker image to GHCR.","should_trigger":true},
+  {"query":"Make pull requests build the image without login or push, and publish only from main.","should_trigger":true},
+  {"query":"Normalize the GHCR image name to lowercase and add commit/latest tags.","should_trigger":true},
+  {"query":"Upgrade the action references in our container publishing workflow to current stable SemVer without SHAs.","should_trigger":true},
+  {"query":"Add Buildx, GHA cache, provenance, and SBOM to our image publishing workflow.","should_trigger":true},
+  {"query":"Our workflow builds base, core, cdn, and spa images in dependency order. Audit candidate promotion and digest verification.","should_trigger":true},
+  {"query":"Create a multi-platform GHCR pipeline with QEMU, vulnerability scanning, Cosign signing, and SemVer tag promotion.","should_trigger":true},
+  {"query":"Find why our GitHub workflow logs into GHCR and pushes images from pull requests.","should_trigger":true},
+  {"query":"Check whether our workflow duplicates the static build already performed by Dockerfile stages.","should_trigger":true},
+  {"query":"Write a verifier for a GHCR image publishing workflow that checks permissions, events, cache, tags, and action versions.","should_trigger":true},
+  {"query":"Write Terraform for an AWS ECR repository and lifecycle policy.","should_trigger":false},
+  {"query":"Configure a Kubernetes Deployment and Service for an already-published image.","should_trigger":false},
+  {"query":"Create a GitHub Actions workflow that deploys a serverless function to AWS Lambda.","should_trigger":false},
+  {"query":"Explain GitHub Actions expressions in general without mentioning containers or registries.","should_trigger":false},
+  {"query":"Build a Docker image locally with docker compose and do not use GitHub Actions.","should_trigger":false},
+  {"query":"Configure Renovate to update npm dependencies.","should_trigger":false},
+  {"query":"Set up a Kubernetes imagePullSecret for a private registry.","should_trigger":false},
+  {"query":"Write a Cosign policy for Kubernetes admission control.","should_trigger":false},
+  {"query":"Fix a broken Dockerfile COPY instruction without changing its CI workflow.","should_trigger":false},
+  {"query":"Create a Slack notification workflow for issue labels.","should_trigger":false}
+]

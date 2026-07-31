@@ -6,7 +6,27 @@ require "pathname"
 require "yaml"
 
 ROOT = Pathname.new(File.expand_path("../..", __dir__))
-EXPECTED_SKILLS = %w[nginx-cdn nginx-spa].freeze
+SKILL_PROFILES = {
+  "nginx-cdn" => {
+    profile: "consumer",
+    image: "ghcr.io/gecut/nginx/cdn:2.0.0",
+    assets: %w[Dockerfile compose.yaml kubernetes.yaml]
+  },
+  "nginx-spa" => {
+    profile: "consumer",
+    image: "ghcr.io/gecut/nginx/spa:1.0.0",
+    assets: %w[Dockerfile compose.yaml kubernetes.yaml]
+  },
+  "nginx-cdn-dockerfile" => {
+    profile: "dockerfile",
+    image: "ghcr.io/gecut/nginx/cdn:2.0.0",
+    assets: %w[Dockerfile compose.yaml]
+  },
+  "github-actions-ghcr-publish" => {
+    profile: "workflow",
+    assets: %w[multi-image.yml single-image.yml]
+  }
+}.freeze
 
 def fail_validation(message)
   warn "skills validation: #{message}"
@@ -84,7 +104,7 @@ rescue JSON::ParserError => error
   fail_validation("invalid JSON in #{path.relative_path_from(ROOT)}: #{error.message}")
 end
 
-EXPECTED_SKILLS.each do |name|
+SKILL_PROFILES.each do |name, profile|
   skill_root = ROOT.join("skills", name)
   skill_file = skill_root.join("SKILL.md")
   fail_validation("missing #{skill_file.relative_path_from(ROOT)}") unless skill_file.file?
@@ -117,20 +137,23 @@ EXPECTED_SKILLS.each do |name|
   validate_functional_evals(skill_root, name)
   validate_trigger_evals(skill_root, name)
 
-  expected_assets = %w[Dockerfile compose.yaml kubernetes.yaml]
+  expected_assets = profile.fetch(:assets)
   actual_assets = skill_root.join("assets").children.select(&:file?).map(&:basename).map(&:to_s).sort
   fail_validation("#{name} assets must be exactly #{expected_assets.join(', ')}") unless actual_assets == expected_assets.sort
-  %w[compose.yaml kubernetes.yaml].each do |asset_name|
+  yaml_assets = expected_assets.select { |asset| File.extname(asset) == ".yaml" || File.extname(asset) == ".yml" }
+  yaml_assets.each do |asset_name|
     asset_path = skill_root.join("assets", asset_name)
     stream = Psych.parse_stream(asset_path.read(encoding: "UTF-8"))
     fail_validation("#{asset_path.relative_path_from(ROOT)} must contain YAML documents") if stream.children.empty?
   rescue Psych::SyntaxError => error
     fail_validation("invalid YAML in #{asset_path.relative_path_from(ROOT)}: #{error.message}")
   end
-  dockerfile = skill_root.join("assets/Dockerfile").read(encoding: "UTF-8")
-  fail_validation("#{name} asset Dockerfile must not use latest") if dockerfile.match?(/:latest(?:\s|$)/)
-  expected_image = metadata.fetch("metadata").fetch("image")
-  fail_validation("#{name} asset Dockerfile must pin #{expected_image}") unless dockerfile.include?("FROM #{expected_image}")
+  if profile.fetch(:profile) == "consumer" || profile.fetch(:profile) == "dockerfile"
+    dockerfile = skill_root.join("assets/Dockerfile").read(encoding: "UTF-8")
+    fail_validation("#{name} asset Dockerfile must not use latest") if dockerfile.match?(/:latest(?:\s|$)/)
+    expected_image = profile.fetch(:image)
+    fail_validation("#{name} asset Dockerfile must pin #{expected_image}") unless dockerfile.include?("FROM #{expected_image}")
+  end
 
   scripts = skill_root.join("scripts").children.select(&:file?)
   fail_validation("#{name} must bundle a verification script") if scripts.empty?
@@ -149,7 +172,7 @@ catalog = YAML.safe_load(
 targets = catalog.fetch("active_images").each_with_object([]) do |image, result|
   result << image["consumer_skill_target"] if image["consumer_skill_target"]
 end
-EXPECTED_SKILLS.each do |name|
+SKILL_PROFILES.select { |_name, profile| profile.fetch(:profile) == "consumer" }.each_key do |name|
   expected_target = "skills/#{name}"
   fail_validation("catalog does not target #{expected_target}") unless targets.include?(expected_target)
 end

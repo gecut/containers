@@ -1,9 +1,13 @@
 # `gecut/nginx/cdn` v2
 
-Production static-origin NGINX for assets that are delivered directly or through
-an external CDN. It extends `ghcr.io/gecut/nginx/core:2.0.0` with one
-deterministic `Cache-Control` policy, ETag support, and representation-aware
-`Vary` headers.
+`ghcr.io/gecut/nginx/cdn:2.0.0` is a production static-file origin. Use it to
+serve a completed website or asset bundle from `/data`, either directly or
+behind a CDN.
+
+It provides deterministic `Cache-Control` rules, ETags, representation-aware
+`Vary` headers, security defaults, and a `/server-info` health endpoint. It does
+not run an application and it does not replace an external CDN, load balancer,
+or reverse proxy.
 
 > [!IMPORTANT]
 > This image serves files from disk. It is not a reverse proxy, does not provide
@@ -13,8 +17,244 @@ deterministic `Cache-Control` policy, ETag support, and representation-aware
 For client-side history routing, use
 [`ghcr.io/gecut/nginx/spa:1.0.0`](../spa/README.md). For a static origin without
 the CDN cache policy, use [`ghcr.io/gecut/nginx/core:2.0.0`](../core/README.md).
-Agents can use the standalone [`nginx-cdn` skill](../../skills/nginx-cdn/) for
-deployment, customization, and diagnosis workflows.
+For upstream applications, use a separate application runtime and proxy tier.
+
+## Is this the right image?
+
+Use this image when:
+
+- your application produces complete static files;
+- files can be served from `/data`;
+- missing files should remain real `404` responses;
+- cache behavior belongs at the origin and may also be honored by a CDN.
+
+Use [`nginx/spa`](../spa/README.md) when a missing extensionless URL must return
+the application shell for client-side routing. Missing assets and dotted paths
+must still return real `404` responses.
+
+Use another runtime or proxy when you need SSR, APIs, WebSockets, TLS
+termination, authentication, `proxy_cache`, dynamic image conversion, or purge
+APIs.
+
+## Using this image with AI agents
+
+This repository provides four portable Agent Skills. They are instructions for
+an AI coding agent. They do not install Docker, deploy your application, or
+change files unless you explicitly ask the agent to do so.
+
+| Skill | Use it for |
+| --- | --- |
+| [`nginx-cdn`](../../skills/nginx-cdn/) | Static-origin deployment, cache headers, ETags, WebP, CORS, startup, and diagnostics |
+| [`nginx-spa`](../../skills/nginx-spa/) | SPA shell fallback, deep links, strict asset `404`s, and SPA probes |
+| [`nginx-cdn-dockerfile`](../../skills/nginx-cdn-dockerfile/) | Multi-stage Dockerfiles that build an application and copy static output into NGINX |
+| [`github-actions-ghcr-publish`](../../skills/github-actions-ghcr-publish/) | Single-image and dependency-ordered multi-image GHCR workflows |
+
+### Install the skills
+
+After this repository version is published, list the remote skills:
+
+```bash
+npx skills@1.5.19 add gecut/containers --list
+```
+
+Install all four:
+
+```bash
+npx skills@1.5.19 add gecut/containers \
+  --skill nginx-cdn \
+  --skill nginx-spa \
+  --skill nginx-cdn-dockerfile \
+  --skill github-actions-ghcr-publish
+```
+
+For local development, install from a checkout:
+
+```bash
+npx skills@1.5.19 add /path/to/containers --list
+npx skills@1.5.19 add /path/to/containers --skill nginx-cdn-dockerfile
+```
+
+The CLI installs instructions for the agent. It does not install the image or
+the tools needed for live checks. The agent may still need repository access,
+Docker, `curl`, registry credentials, or GitHub Actions permissions.
+
+### Choose the skill
+
+| Task | Start with | Add when needed |
+| --- | --- | --- |
+| Serve a normal static site | `nginx-cdn` | `nginx-cdn-dockerfile` for a build image |
+| Serve a React/Vue/Svelte/Angular SPA | `nginx-spa` | `nginx-cdn-dockerfile` for the application Dockerfile |
+| Review or write a Dockerfile | `nginx-cdn-dockerfile` | `nginx-cdn` or `nginx-spa` for runtime behavior |
+| Publish one image to GHCR | `github-actions-ghcr-publish` | `nginx-cdn-dockerfile` for build checks |
+| Publish dependent images as one release | `github-actions-ghcr-publish` | Image-specific consumer skills |
+| Diagnose cache, headers, startup, or routing | `nginx-cdn` or `nginx-spa` | Dockerfile/workflow skill if the issue starts there |
+
+`nginx/cdn` is only a static origin. Use a separate runtime or proxy for SSR,
+APIs, WebSockets, TLS termination, authentication, `proxy_cache`, or purge
+APIs. If an extensionless URL must return the application shell, use
+`nginx-spa`; missing assets and dotted paths must still return real `404`s.
+
+### Important policy differences
+
+The image defaults are optimized for static delivery: proven fingerprinted
+assets use long immutable caching and gzip is enabled. The
+`nginx-cdn-dockerfile` skill may apply a separate short-cache policy for
+projects that overwrite mutable URLs and may disable gzip. Do not assume that
+direct `docker run` has the same settings as a downstream Dockerfile generated
+by that skill.
+
+Generated consumer examples use full `major.minor.patch` versions without
+action SHAs or image digests. This is easier to read but less immutable than
+SHA/digest pinning. The internal workflow for this repository may use SHA or
+digest pinning as a separate maintainer security policy. Image tags such as
+`sha-<commit>` are output metadata and are not dependency pinning.
+
+Agents should check the latest compatible stable version, compare it with the
+lockfile and runner, explain the choice, and ask before applying an
+incompatible major upgrade.
+
+### Ready-to-run prompts
+
+Replace bracketed values with your paths and names. These prompts are
+analysis-first and ask the agent not to edit files. Remove that instruction only
+when you want implementation.
+
+#### Choose the right runtime
+
+```text
+Use the nginx-cdn skill.
+
+Inspect this repository before changing anything:
+- build output: [dist/ or out/ path]
+- current Dockerfile or image: [path]
+- deployment files: [paths]
+
+Decide whether this workload needs nginx/cdn, nginx/spa, nginx/core, or a
+separate application runtime. Check static output completeness, SPA history
+routing, asset and service-worker behavior, cache expectations, /server-info,
+and external CDN or proxy assumptions.
+
+Do not edit files. Return the fit decision, risks, and a minimal implementation
+plan with exact verification commands.
+```
+
+#### Build a production Dockerfile
+
+```text
+Use nginx-cdn-dockerfile and the appropriate runtime skill.
+
+Inspect [Dockerfile path], package manifests, lockfiles, build scripts, build
+output, and deployment workflows. Decide first whether the result is a normal
+static origin or an SPA; do not assume nginx-cdn if client-side history routing
+is required.
+
+Prepare a production Dockerfile that uses the repository's package manager and
+lockfile, BuildKit dependency caching, a multi-stage build, and a minimal final
+image. Copy only the final static output to /data with nginx ownership. Use the
+latest compatible NGINX image with a full major.minor.patch tag and no digest.
+
+For mutable-project defaults, use short cache values, keep service workers
+no-cache and errors no-store, and disable gzip, gzip-static, and expires. Keep
+long immutable caching only when filenames are proven content-addressed. Use
+/server-info for probes; add Docker HEALTHCHECK only if the base image does not
+already provide one.
+
+Do not edit files. Return the Dockerfile, assumptions, risks, and build,
+inspect, and smoke-test commands.
+```
+
+#### Deploy an SPA
+
+```text
+Use the nginx-spa skill.
+
+Inspect the build output at [path] and determine the shell file, public base
+path, client-side router, deep-link behavior, and missing-asset behavior.
+
+Prepare a deployment using ghcr.io/gecut/nginx/spa. It must return 200 for a
+missing extensionless application route, return a real 404 for a missing asset
+or dotted path, validate the shell at startup, and use the correct health
+probes. Check the bundler base path, router base path, NGINX_SPA_INDEX_URI, and
+any ingress rewrite.
+
+Do not edit files. Return the deployment artifact and curl verification matrix.
+```
+
+#### Publish one image to GHCR
+
+```text
+Use github-actions-ghcr-publish and, when needed, nginx-cdn-dockerfile.
+
+Inspect [workflow path], [Dockerfile path], package scripts, repository
+settings, and the default branch. Classify this as a single-image workflow.
+
+Propose a workflow where pull requests validate and build without login or push,
+and only the default branch or workflow_dispatch publishes to GHCR. Use a
+lowercase image name, Buildx, GitHub Actions cache, commit tags, latest only on
+the default branch, provenance and SBOM on publish, and the Dockerfile as the
+only production application-build source. Use compatible full
+major.minor.patch action and tool versions without SHAs.
+
+Do not edit files. Return the job graph, permissions, event matrix, risks, and
+validation commands.
+```
+
+#### Publish dependent images
+
+```text
+Use github-actions-ghcr-publish.
+
+Inspect the workflows and Dockerfiles for these images and dependency order:
+[image list and order]. Decide whether they require one dependency-ordered
+release pipeline or independent workflows.
+
+If one closure is required, design these gates:
+1. build unique multi-platform candidate tags in dependency order;
+2. resolve every candidate manifest to a digest;
+3. run integration tests using digest references;
+4. scan every candidate image;
+5. sign every candidate digest;
+6. promote only after all gates pass;
+7. verify major, minor, patch, commit, and latest aliases point to signed
+   digests.
+
+First audit GHCR permissions, OIDC/Cosign setup, scanner availability, and
+release policy. Report missing prerequisites instead of assuming them. Use
+compatible full major.minor.patch action and tool versions without SHAs.
+
+Do not edit files. Return the dependency graph, permissions, concurrency rules,
+failure conditions, required settings, and validation commands.
+```
+
+#### Diagnose cache and headers
+
+```text
+Use the nginx-cdn skill. The origin is running at [URL] and the problem is:
+[describe the symptom].
+
+Inspect the rendered NGINX configuration first. Build a request matrix for
+HTML, a hashed asset, JSON, an image, a service worker, a missing asset, and a
+request with If-None-Match. Check status, exactly one Cache-Control field,
+Vary, ETag/304, 404 no-store, and query-string behavior.
+
+Separate origin evidence from external CDN evidence. If a CDN is present, check
+Age, X-Cache, Vary, query-string policy, and purge behavior separately. Do not
+claim that a healthy origin proves the edge is correct.
+
+Do not edit files. Return findings, likely cause, and the smallest safe fix.
+```
+
+### What the agent should return
+
+Ask the agent to report the selected image and why it fits, every file/env/
+permission assumption, expected routing and cache behavior, commands actually
+run with their results, and limitations such as missing Docker, `curl`,
+`actionlint`, registry access, credentials, or CDN staging.
+
+The bundled `verify-origin.sh` needs a running origin and real fixture paths.
+The SPA verifier also needs a running origin. Static Dockerfile and workflow
+verifiers are useful filters, but they do not replace a real build, container
+startup, registry publish, or CDN-edge test.
 
 ## Runtime contract
 
@@ -29,6 +269,12 @@ deployment, customization, and diagnosis workflows.
 | Stop signal | `SIGQUIT` for graceful shutdown |
 | Templates | `/etc/nginx/templates/**/*.template` |
 | Rendered configuration | `/etc/nginx/conf.d/**` |
+
+Use `GET /server-info` for Docker Compose and Kubernetes liveness/readiness
+probes. This endpoint proves that the origin is serving requests; it does not
+prove that DNS, TLS, an external CDN, an upstream application, or a load
+balancer is healthy. For an SPA, readiness should also confirm that the shell
+file exists and is readable.
 
 The image is designed for immutable build output. A read-only bind mount is
 supported when every required file is already present. In a downstream image,
@@ -106,6 +352,19 @@ Do not add a second `expires` directive or another unconditional
 `Cache-Control` header in a downstream template. Replace the stock policy map
 when the policy must change.
 
+### Origin checks and CDN checks are different
+
+An origin test proves what this container returns. A CDN test proves what users
+receive from the edge. Check them separately:
+
+- **Origin:** status, `Cache-Control`, `Vary`, ETag/304, error `no-store`, and
+  the selected representation.
+- **Edge:** `Age`, `X-Cache`, query-string cache keys, `Vary` handling, purge,
+  and provider-specific cache precedence.
+
+A healthy origin does not prove that a downstream CDN stored, purged, or served
+the response correctly.
+
 ## Quick start
 
 ### Bind-mount a completed build
@@ -134,6 +393,13 @@ COPY --chown=nginx:nginx dist/ /data/
 docker build -t example/static-origin:1.0.0 .
 docker run --rm -p 8080:80 example/static-origin:1.0.0
 ```
+
+This example expects `dist/` to already exist. If the repository must build the
+application inside Docker, use the
+[`nginx-cdn-dockerfile` skill](../../skills/nginx-cdn-dockerfile/) to select the
+package manager, cache dependency installation, run the repository's build
+scripts, and copy only the final output into the NGINX stage. It will route SPA
+projects to the `nginx-spa` runtime instead of adding a fallback to this image.
 
 ### Docker Compose
 
